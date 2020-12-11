@@ -1,5 +1,6 @@
 import gym
 import numpy as np
+import torch as th
 
 from stable_baselines3 import SAC
 from sac_reservoir import ReservoirSAC
@@ -9,8 +10,13 @@ import gym_continuouscartpole  # not necessary to import but this checks if it i
 env = gym.make('gym_continuouscartpole:ContinuousCartPole-v1')
 model_alg = ReservoirSAC
 # model_alg = SAC
+optimizier_kwargs = {}
+policy_kwargs = {
+    'optimizer_class': th.optim.SGD, #TODO: should this be changed? in actor i see optimizer is indeed SGD, but "optimizer_class" is still Adam (does nothing i think but annoying)
+    'optimizer_kwargs': optimizier_kwargs,
+}
 
-model = model_alg(MlpPolicy, env, verbose=1, buffer_size=100, batch_size=64)
+model = model_alg(MlpPolicy, env, verbose=1, buffer_size=100, batch_size=64, learning_rate=3e-4, policy_kwargs=policy_kwargs)
 model.learn(total_timesteps=1000, log_interval=4)
 model.save(model_alg.__name__)
 
