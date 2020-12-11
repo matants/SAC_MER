@@ -7,14 +7,16 @@ from stable_baselines3.sac import MlpPolicy
 import gym_continuouscartpole  # not necessary to import but this checks if it is installed
 
 env = gym.make('gym_continuouscartpole:ContinuousCartPole-v1')
+model_alg = ReservoirSAC
+# model_alg = SAC
 
-model = ReservoirSAC(MlpPolicy, env, verbose=1, buffer_size=100, batch_size=64)
+model = model_alg(MlpPolicy, env, verbose=1, buffer_size=100, batch_size=64)
 model.learn(total_timesteps=1000, log_interval=4)
-model.save("reservoir_sac")
+model.save(model_alg.__name__)
 
 del model  # remove to demonstrate saving and loading
 
-model = SAC.load("reservoir_sac")
+model = model_alg.load(model_alg.__name__)
 
 obs = env.reset()
 count = 0
