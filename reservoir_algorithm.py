@@ -20,6 +20,7 @@ from stable_baselines3.common.utils import safe_mean
 from stable_baselines3.common.vec_env import VecEnv
 
 from reservoir_buffer import ReservoirBuffer
+from stable_baselines3.common.base_class import maybe_make_env
 
 
 class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
@@ -436,7 +437,7 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
                         # Avoid changing the original ones
                         self._last_original_obs, new_obs_, reward_ = self._last_obs, new_obs, reward
 
-                    replay_buffer.add(self._last_original_obs, new_obs_, buffer_action, reward_, done, total_steps - 1)
+                    replay_buffer.add(self._last_original_obs, new_obs_, buffer_action, reward_, done, self.num_timesteps - 1)
 
                 self._last_obs = new_obs
                 # Save the unnormalized observation
@@ -472,3 +473,34 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
         callback.on_rollout_end()
 
         return RolloutReturn(mean_reward, total_steps, total_episodes, continue_training)
+
+    def update_env(self, env, support_multi_env: bool = False, create_eval_env: bool = False,
+                   monitor_wrapper: bool = True, ):
+        """
+        Replace current env with new env.
+        :param env:
+        :param support_multi_env: Whether the algorithm supports training
+        with multiple environments (as in A2C)
+        :param create_eval_env: Whether to create a second environment that will be
+            used for evaluating the agent periodically. (Only available when passing string for the environment)
+        :param monitor_wrapper: When creating an environment, whether to wrap it
+        or not in a Monitor wrapper.
+        :return:
+        """
+        if env is not None:
+            if isinstance(env, str):
+                if create_eval_env:
+                    self.eval_env = maybe_make_env(env, monitor_wrapper, self.verbose)
+
+            env = maybe_make_env(env, monitor_wrapper, self.verbose)
+            env = self._wrap_env(env, self.verbose)
+
+            self.observation_space = env.observation_space
+            self.action_space = env.action_space
+            self.n_envs = env.num_envs
+            self.env = env
+
+            if not support_multi_env and self.n_envs > 1:
+                raise ValueError(
+                    "Error: the model does not support multiple envs; it requires " "a single vectorized environment."
+                )
