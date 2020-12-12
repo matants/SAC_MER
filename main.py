@@ -12,7 +12,7 @@ model_alg = ReservoirSAC
 # model_alg = SAC
 optimizier_kwargs = {}
 policy_kwargs = {
-    'optimizer_class': th.optim.SGD, #TODO: should this be changed? in actor i see optimizer is indeed SGD, but "optimizer_class" is still Adam (does nothing i think but annoying)
+    'optimizer_class': th.optim.SGD,
     'optimizer_kwargs': optimizier_kwargs,
 }
 

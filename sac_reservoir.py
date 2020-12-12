@@ -164,7 +164,7 @@ class ReservoirSAC(ReservoirOffPolicyAlgorithm):
             # Note: we optimize the log of the entropy coeff which is slightly different from the paper
             # as discussed in https://github.com/rail-berkeley/softlearning/issues/37
             self.log_ent_coef = th.log(th.ones(1, device=self.device) * init_value).requires_grad_(True)
-            self.ent_coef_optimizer = th.optim.Adam([self.log_ent_coef], lr=self.lr_schedule(1))  #TODO: change to optimizer of policy and actor (policy_kwargs[optimizer_class])
+            self.ent_coef_optimizer = self.policy_kwargs['optimizer_class']([self.log_ent_coef], lr=self.lr_schedule(1))
         else:
             # Force conversion to float
             # this will throw an error if a malformed string (different from 'auto')
