@@ -13,6 +13,8 @@ from stable_baselines3.sac.policies import SACPolicy
 
 from reservoir_algorithm import ReservoirOffPolicyAlgorithm
 from sac_reservoir import ReservoirSAC
+from random import randint
+from stable_baselines3.common.utils import update_learning_rate
 
 
 class SACMER(ReservoirSAC):
@@ -145,15 +147,25 @@ class SACMER(ReservoirSAC):
         if self.ent_coef_optimizer is not None:
             optimizers += [self.ent_coef_optimizer]
 
-        # Update learning rate according to lr schedule
-        self._update_learning_rate(optimizers)
+        base_lr = self.lr_schedule(self._current_progress_remaining)
 
         ent_coef_losses, ent_coefs = [], []
         actor_losses, critic_losses = [], []
 
+        # TODO: Save initial weights of models
+
+        current_example_ind = randint(0, gradient_steps - 1)
         for gradient_step in range(gradient_steps):
-            # Sample replay buffer
-            replay_data = self.replay_buffer.sample(batch_size, env=self._vec_normalize_env)
+            # Sample replay buffer or current example, and update learning rate accordingly
+            if gradient_step == current_example_ind:
+                replay_data = self.current_experience_buffer.sample(1, env=self._vec_normalize_env)
+                for optimizer in optimizers:
+                    update_learning_rate(optimizer, base_lr * self.mer_s)
+            else:
+                replay_data = self.replay_buffer.sample(batch_size, env=self._vec_normalize_env)
+                for optimizer in optimizers:
+                    update_learning_rate(optimizer, base_lr)
+
 
             # We need to sample because `log_std` may have changed between two gradient steps
             if self.use_sde:
@@ -223,6 +235,8 @@ class SACMER(ReservoirSAC):
             # Update target networks
             if gradient_step % self.target_update_interval == 0:
                 polyak_update(self.critic.parameters(), self.critic_target.parameters(), self.tau)
+
+        # TODO: Perform Reptile step
 
         self._n_updates += gradient_steps
 
