@@ -21,14 +21,15 @@ policy_kwargs = {
     'optimizer_kwargs': optimizier_kwargs,
 }
 model = model_alg(MlpPolicy, env, verbose=2, buffer_size=10000, batch_size=64, learning_rate=3e-4, learning_starts=300,
-                  gradient_steps=4, policy_kwargs=policy_kwargs, mer_s=2)
-for length in [2, 0.5]:
+                  gradient_steps=4, policy_kwargs=policy_kwargs, mer_s=2, mer_gamma=0.3)
+for length in [1, 0.5]:
     env.env.length = length
     model.update_env(env)
     model.learn(total_timesteps=1000, log_interval=4, reset_num_timesteps=False)
     obs = env.reset()
     count = 0
     num_of_games_played = 0
+    tot_counts = []
     while num_of_games_played < 10:
         count += 1
         action, _states = model.predict(obs, deterministic=True)
@@ -36,10 +37,11 @@ for length in [2, 0.5]:
         env.render()
         if done:
             print(f"Episode length: {count}")
+            tot_counts.append(count)
             count = 0
             num_of_games_played += 1
             obs = env.reset()
-
+    print(f"Mean reward: {np.mean(tot_counts)}")
 model.save(model_alg.__name__)
 
 # del model  # remove to demonstrate saving and loading

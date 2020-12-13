@@ -15,7 +15,7 @@ from reservoir_algorithm import ReservoirOffPolicyAlgorithm
 from sac_reservoir import ReservoirSAC
 from random import randint
 from stable_baselines3.common.utils import update_learning_rate
-
+from copy import deepcopy
 
 class SACMER(ReservoirSAC):
     """
@@ -108,7 +108,6 @@ class SACMER(ReservoirSAC):
         mer_gamma: float = 0.3,
         mer_s: int = 5,
     ):
-
         super(SACMER, self).__init__(
             policy,
             env,
@@ -141,6 +140,9 @@ class SACMER(ReservoirSAC):
         self.mer_gamma = mer_gamma
         self.mer_s = mer_s
 
+        # if self.policy_kwargs['optimizer_class'] is not th.optim.SGD:
+        #     raise ValueError("Optimizer Must be SGD!")
+
     def train(self, gradient_steps: int, batch_size: int = 64) -> None:
         # Update optimizers learning rate
         optimizers = [self.actor.optimizer, self.critic.optimizer]
@@ -152,7 +154,10 @@ class SACMER(ReservoirSAC):
         ent_coef_losses, ent_coefs = [], []
         actor_losses, critic_losses = [], []
 
-        # TODO: Save initial weights of models
+        # Save initial weights of model
+        models_to_update = [self.actor, self.critic, self.critic_target]
+        initial_state_dicts = [deepcopy(model.state_dict()) for model in models_to_update]
+        initial_log_ent_coef = self.log_ent_coef.detach().clone()
 
         current_example_ind = randint(0, gradient_steps - 1)
         for gradient_step in range(gradient_steps):
@@ -236,7 +241,10 @@ class SACMER(ReservoirSAC):
             if gradient_step % self.target_update_interval == 0:
                 polyak_update(self.critic.parameters(), self.critic_target.parameters(), self.tau)
 
-        # TODO: Perform Reptile step
+        # Perform Reptile step
+        for i_model, model in enumerate(models_to_update):
+            self.reptile_step_state_dict(model, initial_state_dicts[i_model])
+        self.log_ent_coef.data = self.reptile_step_tensor(self.log_ent_coef.data, initial_log_ent_coef.data)
 
         self._n_updates += gradient_steps
 
@@ -246,3 +254,12 @@ class SACMER(ReservoirSAC):
         logger.record("train/critic_loss", np.mean(critic_losses))
         if len(ent_coef_losses) > 0:
             logger.record("train/ent_coef_loss", np.mean(ent_coef_losses))
+
+    def reptile_step_state_dict(self, model, weights_before):
+        weights_after = model.state_dict()
+        model.load_state_dict({name:
+                                   weights_before[name] + (weights_after[name] - weights_before[name]) * self.mer_gamma
+                               for name in weights_before})
+
+    def reptile_step_tensor(self, value_after, value_before):
+        return value_before + (value_after - value_before) * self.mer_gamma
