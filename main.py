@@ -4,20 +4,23 @@ import torch as th
 
 from stable_baselines3 import SAC
 from sac_reservoir import ReservoirSAC
+from sac_mer import SACMER
+from sac_expanded import SACExpanded
 from stable_baselines3.sac import MlpPolicy
 import gym_continuouscartpole  # not necessary to import but this checks if it is installed
 
 env = gym.make('gym_continuouscartpole:ContinuousCartPole-v1')
 # env = gym.make('Pendulum-v0')
 
-model_alg = ReservoirSAC
-# model_alg = SAC
+# model_alg = SACMER
+# model_alg = ReservoirSAC
+model_alg = SACExpanded
 optimizier_kwargs = {}
 policy_kwargs = {
     'optimizer_class': th.optim.Adam,
     'optimizer_kwargs': optimizier_kwargs,
 }
-model = model_alg(MlpPolicy, env, verbose=2, buffer_size=10000, batch_size=256, learning_rate=3e-4, learning_starts=256,
+model = model_alg(MlpPolicy, env, verbose=2, buffer_size=10000, batch_size=256, learning_rate=3e-4, learning_starts=300,
                   policy_kwargs=policy_kwargs)
 for length in [2, 0.5]:
     env.env.length = length
