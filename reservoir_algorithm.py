@@ -148,6 +148,7 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
 
         self.actor = None  # type: Optional[th.nn.Module]
         self.replay_buffer = None  # type: Optional[ReservoirBuffer]
+        self.current_experience_buffer = None  # type: Optional[ReplayBuffer]
         # Update policy keyword arguments
         if sde_support:
             self.policy_kwargs["use_sde"] = self.use_sde
@@ -163,6 +164,13 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
             self.action_space,
             self.device,
             optimize_memory_usage=self.optimize_memory_usage,
+        )
+        self.current_experience_buffer = ReplayBuffer(
+            1,
+            self.observation_space,
+            self.action_space,
+            self.device,
+            optimize_memory_usage=False,
         )
         self.policy = self.policy_class(
             self.observation_space,
@@ -438,6 +446,7 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
                         self._last_original_obs, new_obs_, reward_ = self._last_obs, new_obs, reward
 
                     replay_buffer.add(self._last_original_obs, new_obs_, buffer_action, reward_, done, self.num_timesteps - 1)
+                self.current_experience_buffer.add(self._last_original_obs, new_obs_, buffer_action, reward_, done)
 
                 self._last_obs = new_obs
                 # Save the unnormalized observation
