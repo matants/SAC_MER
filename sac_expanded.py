@@ -12,7 +12,8 @@ from stable_baselines3.common.utils import polyak_update
 from stable_baselines3.sac.policies import SACPolicy
 
 from stable_baselines3 import SAC
-from stable_baselines3.common.base_class import maybe_make_env
+from copy import deepcopy
+from stable_baselines3.common.monitor import Monitor
 
 
 class SACExpanded(SAC):
@@ -20,7 +21,7 @@ class SACExpanded(SAC):
     def __init__(
             self,
             policy: Union[str, Type[SACPolicy]],
-            env: Union[GymEnv, str],
+            env: GymEnv,
             learning_rate: Union[float, Callable] = 3e-4,
             buffer_size: int = int(1e6),
             learning_starts: int = 100,
@@ -45,6 +46,7 @@ class SACExpanded(SAC):
             seed: Optional[int] = None,
             device: Union[th.device, str] = "auto",
             _init_setup_model: bool = True,
+            monitor_wrapper: bool = True,
             **kwargs
     ):
         super().__init__(
@@ -75,12 +77,13 @@ class SACExpanded(SAC):
             device,
             _init_setup_model,
         )
+        self.update_env(env, support_multi_env=False, create_eval_env=create_eval_env, monitor_wrapper=monitor_wrapper)
 
     def update_env(self, env, support_multi_env: bool = False, create_eval_env: bool = False,
                    monitor_wrapper: bool = True, ):
         """
         Replace current env with new env.
-        :param env:
+        :param env: Gym environment (activated, not a string).
         :param support_multi_env: Whether the algorithm supports training
         with multiple environments (as in A2C)
         :param create_eval_env: Whether to create a second environment that will be
@@ -90,11 +93,13 @@ class SACExpanded(SAC):
         :return:
         """
         if env is not None:
-            if isinstance(env, str):
-                if create_eval_env:
-                    self.eval_env = maybe_make_env(env, monitor_wrapper, self.verbose)
+            if create_eval_env:
+                self.eval_env = deepcopy(env)
+                if monitor_wrapper:
+                    self.eval_env = Monitor(self.eval_env, filename=None)
 
-            env = maybe_make_env(env, monitor_wrapper, self.verbose)
+            if monitor_wrapper:
+                env = Monitor(env, filename=None)
             env = self._wrap_env(env, self.verbose)
 
             self.observation_space = env.observation_space

@@ -20,7 +20,8 @@ from stable_baselines3.common.utils import safe_mean
 from stable_baselines3.common.vec_env import VecEnv
 
 from reservoir_buffer import ReservoirBuffer
-from stable_baselines3.common.base_class import maybe_make_env
+from copy import deepcopy
+from stable_baselines3.common.monitor import Monitor
 
 
 class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
@@ -154,6 +155,9 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
             self.policy_kwargs["use_sde"] = self.use_sde
         # For gSDE only
         self.use_sde_at_warmup = use_sde_at_warmup
+
+        self.update_env(env, support_multi_env=support_multi_env, create_eval_env=create_eval_env,
+                        monitor_wrapper=monitor_wrapper)
 
     def _setup_model(self) -> None:
         self._setup_lr_schedule()
@@ -445,7 +449,8 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
                         # Avoid changing the original ones
                         self._last_original_obs, new_obs_, reward_ = self._last_obs, new_obs, reward
 
-                    replay_buffer.add(self._last_original_obs, new_obs_, buffer_action, reward_, done, self.num_timesteps - 1)
+                    replay_buffer.add(self._last_original_obs, new_obs_, buffer_action, reward_, done,
+                                      self.num_timesteps - 1)
                 self.current_experience_buffer.add(self._last_original_obs, new_obs_, buffer_action, reward_, done)
 
                 self._last_obs = new_obs
@@ -487,7 +492,7 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
                    monitor_wrapper: bool = True, ):
         """
         Replace current env with new env.
-        :param env:
+        :param env: Gym environment (activated, not a string).
         :param support_multi_env: Whether the algorithm supports training
         with multiple environments (as in A2C)
         :param create_eval_env: Whether to create a second environment that will be
@@ -497,11 +502,13 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
         :return:
         """
         if env is not None:
-            if isinstance(env, str):
-                if create_eval_env:
-                    self.eval_env = maybe_make_env(env, monitor_wrapper, self.verbose)
+            if create_eval_env:
+                self.eval_env = deepcopy(env)
+                if monitor_wrapper:
+                    self.eval_env = Monitor(self.eval_env, filename=None)
 
-            env = maybe_make_env(env, monitor_wrapper, self.verbose)
+            if monitor_wrapper:
+                env = Monitor(env, filename=None)
             env = self._wrap_env(env, self.verbose)
 
             self.observation_space = env.observation_space

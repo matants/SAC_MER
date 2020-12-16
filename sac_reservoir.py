@@ -100,6 +100,7 @@ class ReservoirSAC(ReservoirOffPolicyAlgorithm):
         seed: Optional[int] = None,
         device: Union[th.device, str] = "auto",
         _init_setup_model: bool = True,
+        monitor_wrapper: bool = True,
     ):
 
         super(ReservoirSAC, self).__init__(
@@ -126,6 +127,7 @@ class ReservoirSAC(ReservoirOffPolicyAlgorithm):
             sde_sample_freq=sde_sample_freq,
             use_sde_at_warmup=use_sde_at_warmup,
             optimize_memory_usage=optimize_memory_usage,
+            monitor_wrapper=monitor_wrapper,
         )
 
         self.target_entropy = target_entropy
