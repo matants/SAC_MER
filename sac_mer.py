@@ -149,6 +149,12 @@ class SACMER(ReservoirSAC):
         if self.ent_coef_optimizer is not None:
             optimizers += [self.ent_coef_optimizer]
 
+        # Reset optimizers:
+        for i_optimizer, optimizer in enumerate(optimizers):
+            new_optim = deepcopy(optimizer)
+            new_optim.__init__(optimizer.param_groups[0]['params'])
+            optimizers[i_optimizer] = new_optim
+
         base_lr = self.lr_schedule(self._current_progress_remaining)
 
         ent_coef_losses, ent_coefs = [], []
