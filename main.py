@@ -23,10 +23,10 @@ model_alg = SACExpanded
 now = datetime.now().strftime("%Y_%m_%d__%H_%M")
 tensorboard_path = './tb__' + now + '/'
 
-optimizier_kwargs = {}
+optimizer_kwargs = {}
 policy_kwargs = {
     'optimizer_class': th.optim.Adam,
-    'optimizer_kwargs': optimizier_kwargs,
+    'optimizer_kwargs': optimizer_kwargs,
 }
 all_result_means = []
 model = model_alg(MlpPolicy, env, verbose=2, buffer_size=10000, batch_size=64, learning_rate=3e-4, learning_starts=256,

@@ -81,7 +81,8 @@ class SACExpanded(SAC):
                         reset_optimizers=False)
 
     def update_env(self, env, support_multi_env: bool = False,
-                   eval_env: Optional[GymEnv] = None, monitor_wrapper: bool = True, reset_optimizers: bool = False, **kwargs):
+                   eval_env: Optional[GymEnv] = None, monitor_wrapper: bool = True, reset_optimizers: bool = False,
+                   **kwargs):
         """
         Replace current env with new env.
         :param env: Gym environment (activated, not a string).
@@ -127,3 +128,42 @@ class SACExpanded(SAC):
                 raise ValueError(
                     "Error: the model does not support multiple envs; it requires " "a single vectorized environment."
                 )
+
+    def learn(
+            self,
+            total_timesteps: int,
+            callback: MaybeCallback = None,
+            log_interval: int = 4,
+            eval_env: Optional[GymEnv] = None,
+            eval_freq: int = -1,
+            n_eval_episodes: int = 5,
+            tb_log_name: str = "SAC",
+            eval_log_path: Optional[str] = None,
+            reset_num_timesteps: bool = True,
+            **kwargs
+    ) -> OffPolicyAlgorithm:
+        """
+
+        :param total_timesteps:
+        :param callback:
+        :param log_interval:
+        :param eval_env:
+        :param eval_freq:
+        :param n_eval_episodes:
+        :param tb_log_name:
+        :param eval_log_path:
+        :param reset_num_timesteps:
+        :param kwargs: Does nothing just so method doesn't break.
+        :return:
+        """
+        return super().learn(
+            total_timesteps=total_timesteps,
+            callback=callback,
+            log_interval=log_interval,
+            eval_env=eval_env,
+            eval_freq=eval_freq,
+            n_eval_episodes=n_eval_episodes,
+            tb_log_name=tb_log_name,
+            eval_log_path=eval_log_path,
+            reset_num_timesteps=reset_num_timesteps,
+        )

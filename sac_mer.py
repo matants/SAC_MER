@@ -17,6 +17,7 @@ from random import randint
 from stable_baselines3.common.utils import update_learning_rate
 from copy import deepcopy
 
+
 class SACMER(ReservoirSAC):
     """
     Soft Actor-Critic (SAC)
@@ -145,14 +146,59 @@ class SACMER(ReservoirSAC):
         # if self.policy_kwargs['optimizer_class'] is not th.optim.SGD:
         #     raise ValueError("Optimizer Must be SGD!")
 
+    def learn(
+            self,
+            total_timesteps: int,
+            callback: MaybeCallback = None,
+            log_interval: int = 4,
+            eval_env: Optional[GymEnv] = None,
+            eval_freq: int = -1,
+            n_eval_episodes: int = 5,
+            tb_log_name: str = "SAC",
+            eval_log_path: Optional[str] = None,
+            reset_num_timesteps: bool = True,
+            is_mer: bool = True,
+    ) -> ReservoirOffPolicyAlgorithm:
+        total_timesteps, callback = self._setup_learn(
+            total_timesteps, eval_env, callback, eval_freq, n_eval_episodes, eval_log_path, reset_num_timesteps,
+            tb_log_name
+        )
+
+        callback.on_training_start(locals(), globals())
+
+        while self.num_timesteps < total_timesteps:
+
+            rollout = self.collect_rollouts(
+                self.env,
+                n_episodes=self.n_episodes_rollout,
+                n_steps=self.train_freq,
+                action_noise=self.action_noise,
+                callback=callback,
+                learning_starts=self.learning_starts,
+                replay_buffer=self.replay_buffer,
+                log_interval=log_interval,
+            )
+
+            if rollout.continue_training is False:
+                break
+
+            if self.num_timesteps > 0 and self.num_timesteps > self.learning_starts:
+                # If no `gradient_steps` is specified,
+                # do as many gradients steps as steps performed during the rollout
+                gradient_steps = self.gradient_steps if self.gradient_steps > 0 else rollout.episode_timesteps
+                self.train(batch_size=self.batch_size, gradient_steps=gradient_steps, is_mer=is_mer)
+
+        callback.on_training_end()
+
+        return self
+
     def train(self, gradient_steps: int, batch_size: int = 64, is_mer=True) -> None:
         if is_mer:
             self.train_mer(gradient_steps, batch_size)
         else:
-            raise NotImplementedError("Implement standard training.") #TODO
+            self.train_standard(gradient_steps, batch_size)
 
     def train_mer(self, gradient_steps: int, batch_size: int = 64) -> None:
-        # Update optimizers learning rate
         optimizers = [self.actor.optimizer, self.critic.optimizer]
         if self.ent_coef_optimizer is not None:
             optimizers += [self.ent_coef_optimizer]
@@ -162,6 +208,7 @@ class SACMER(ReservoirSAC):
             optimizer.__init__(optimizer.param_groups[0]['params'])
             optimizers[i_optimizer] = optimizer
 
+        # Update optimizers learning rate
         base_lr = self.lr_schedule(self._current_progress_remaining)
 
         ent_coef_losses, ent_coefs = [], []
@@ -258,6 +305,100 @@ class SACMER(ReservoirSAC):
         for i_model, model in enumerate(models_to_update):
             self.reptile_step_state_dict(model, initial_state_dicts[i_model])
         self.log_ent_coef.data = self.reptile_step_tensor(self.log_ent_coef.data, initial_log_ent_coef.data)
+
+        self._n_updates += gradient_steps
+
+        logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
+        logger.record("train/ent_coef", np.mean(ent_coefs))
+        logger.record("train/actor_loss", np.mean(actor_losses))
+        logger.record("train/critic_loss", np.mean(critic_losses))
+        if len(ent_coef_losses) > 0:
+            logger.record("train/ent_coef_loss", np.mean(ent_coef_losses))
+
+    def train_standard(self, gradient_steps: int, batch_size: int = 64) -> None:
+        # Update optimizers learning rate
+        optimizers = [self.actor.optimizer, self.critic.optimizer]
+        if self.ent_coef_optimizer is not None:
+            optimizers += [self.ent_coef_optimizer]
+
+        # Update learning rate according to lr schedule
+        self._update_learning_rate(optimizers)
+
+        ent_coef_losses, ent_coefs = [], []
+        actor_losses, critic_losses = [], []
+
+        for gradient_step in range(gradient_steps):
+            # Sample replay buffer
+            replay_data = self.replay_buffer.sample(batch_size, env=self._vec_normalize_env)
+
+            # We need to sample because `log_std` may have changed between two gradient steps
+            if self.use_sde:
+                self.actor.reset_noise()
+
+            # Action by the current actor for the sampled state
+            actions_pi, log_prob = self.actor.action_log_prob(replay_data.observations)
+            log_prob = log_prob.reshape(-1, 1)
+
+            ent_coef_loss = None
+            if self.ent_coef_optimizer is not None:
+                # Important: detach the variable from the graph
+                # so we don't change it with other losses
+                # see https://github.com/rail-berkeley/softlearning/issues/60
+                ent_coef = th.exp(self.log_ent_coef.detach())
+                ent_coef_loss = -(self.log_ent_coef * (log_prob + self.target_entropy).detach()).mean()
+                ent_coef_losses.append(ent_coef_loss.item())
+            else:
+                ent_coef = self.ent_coef_tensor
+
+            ent_coefs.append(ent_coef.item())
+
+            # Optimize entropy coefficient, also called
+            # entropy temperature or alpha in the paper
+            if ent_coef_loss is not None:
+                self.ent_coef_optimizer.zero_grad()
+                ent_coef_loss.backward()
+                self.ent_coef_optimizer.step()
+
+            with th.no_grad():
+                # Select action according to policy
+                next_actions, next_log_prob = self.actor.action_log_prob(replay_data.next_observations)
+                # Compute the target Q value: min over all critics targets
+                targets = th.cat(self.critic_target(replay_data.next_observations, next_actions), dim=1)
+                target_q, _ = th.min(targets, dim=1, keepdim=True)
+                # add entropy term
+                target_q = target_q - ent_coef * next_log_prob.reshape(-1, 1)
+                # td error + entropy term
+                q_backup = replay_data.rewards + (1 - replay_data.dones) * self.gamma * target_q
+
+            # Get current Q estimates for each critic network
+            # using action from the replay buffer
+            current_q_estimates = self.critic(replay_data.observations, replay_data.actions)
+
+            # Compute critic loss
+            critic_loss = 0.5 * sum([F.mse_loss(current_q, q_backup) for current_q in current_q_estimates])
+            critic_losses.append(critic_loss.item())
+
+            # Optimize the critic
+            self.critic.optimizer.zero_grad()
+            critic_loss.backward()
+            self.critic.optimizer.step()
+
+            # Compute actor loss
+            # Alternative: actor_loss = th.mean(log_prob - qf1_pi)
+            # Mean over all critic networks
+            q_values_pi = th.cat(self.critic.forward(replay_data.observations, actions_pi), dim=1)
+            min_qf_pi, _ = th.min(q_values_pi, dim=1, keepdim=True)
+            actor_loss = (ent_coef * log_prob - min_qf_pi).mean()
+            actor_losses.append(actor_loss.item())
+
+            # Optimize the actor
+            self.actor.optimizer.zero_grad()
+            actor_loss.backward()
+            self.actor.optimizer.step()
+
+            # Update target networks
+            if gradient_step % self.target_update_interval == 0:
+                polyak_update(self.critic.parameters(), self.critic_target.parameters(), self.tau)
 
         self._n_updates += gradient_steps
 
