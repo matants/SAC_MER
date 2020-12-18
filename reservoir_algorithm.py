@@ -157,7 +157,7 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
         self.use_sde_at_warmup = use_sde_at_warmup
 
         self.update_env(env, support_multi_env=support_multi_env, create_eval_env=create_eval_env,
-                        monitor_wrapper=monitor_wrapper)
+                        monitor_wrapper=monitor_wrapper,  is_reservoir_replay=True)
 
     def _setup_model(self) -> None:
         self._setup_lr_schedule()
@@ -489,7 +489,7 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
         return RolloutReturn(mean_reward, total_steps, total_episodes, continue_training)
 
     def update_env(self, env, support_multi_env: bool = False, create_eval_env: bool = False,
-                   monitor_wrapper: bool = True, ):
+                   monitor_wrapper: bool = True, is_reservoir_replay: bool = True, **kwargs):
         """
         Replace current env with new env.
         :param env: Gym environment (activated, not a string).
@@ -499,8 +499,16 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
             used for evaluating the agent periodically. (Only available when passing string for the environment)
         :param monitor_wrapper: When creating an environment, whether to wrap it
         or not in a Monitor wrapper.
+        :param is_reservoir_replay: Whether experience replay is normal or reservoir
+        :param kwargs: Does nothing, just so more arguments can pass without method failing
         :return:
         """
+        if self.replay_buffer is not None:
+            if is_reservoir_replay:
+                self.replay_buffer.is_reservoir = True
+            else:
+                self.replay_buffer.is_reservoir = False
+
         if env is not None:
             if create_eval_env:
                 self.eval_env = deepcopy(env)

@@ -145,7 +145,13 @@ class SACMER(ReservoirSAC):
         # if self.policy_kwargs['optimizer_class'] is not th.optim.SGD:
         #     raise ValueError("Optimizer Must be SGD!")
 
-    def train(self, gradient_steps: int, batch_size: int = 64) -> None:
+    def train(self, gradient_steps: int, batch_size: int = 64, is_mer=True) -> None:
+        if is_mer:
+            self.train_mer(gradient_steps, batch_size)
+        else:
+            pass
+
+    def train_mer(self, gradient_steps: int, batch_size: int = 64) -> None:
         # Update optimizers learning rate
         optimizers = [self.actor.optimizer, self.critic.optimizer]
         if self.ent_coef_optimizer is not None:
@@ -153,9 +159,8 @@ class SACMER(ReservoirSAC):
 
         # Reset optimizers:
         for i_optimizer, optimizer in enumerate(optimizers):
-            new_optim = deepcopy(optimizer)
-            new_optim.__init__(optimizer.param_groups[0]['params'])
-            optimizers[i_optimizer] = new_optim
+            optimizer.__init__(optimizer.param_groups[0]['params'])
+            optimizers[i_optimizer] = optimizer
 
         base_lr = self.lr_schedule(self._current_progress_remaining)
 

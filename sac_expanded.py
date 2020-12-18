@@ -77,10 +77,11 @@ class SACExpanded(SAC):
             device,
             _init_setup_model,
         )
-        self.update_env(env, support_multi_env=False, create_eval_env=create_eval_env, monitor_wrapper=monitor_wrapper)
+        self.update_env(env, support_multi_env=False, create_eval_env=create_eval_env, monitor_wrapper=monitor_wrapper,
+                        reset_optimizers=False)
 
     def update_env(self, env, support_multi_env: bool = False, create_eval_env: bool = False,
-                   monitor_wrapper: bool = True, ):
+                   monitor_wrapper: bool = True, reset_optimizers: bool = False, **kwargs):
         """
         Replace current env with new env.
         :param env: Gym environment (activated, not a string).
@@ -90,8 +91,24 @@ class SACExpanded(SAC):
             used for evaluating the agent periodically. (Only available when passing string for the environment)
         :param monitor_wrapper: When creating an environment, whether to wrap it
         or not in a Monitor wrapper.
+        :param reset_optimizers: Whether to reset optimizers (momentums, etc.).
+        :param kwargs: Does nothing, just so more arguments can pass without method failing
         :return:
         """
+        if reset_optimizers:
+            optimizers = []
+            if self.actor is not None:
+                optimizers.append(self.actor.optimizer)
+            if self.critic is not None:
+                optimizers.append(self.critic.optimizer)
+            if self.ent_coef_optimizer is not None:
+                optimizers.append(self.ent_coef_optimizer)
+
+            # Reset optimizers:
+            for i_optimizer, optimizer in enumerate(optimizers):
+                optimizer.__init__(optimizer.param_groups[0]['params'])
+                optimizers[i_optimizer] = optimizer
+
         if env is not None:
             if create_eval_env:
                 self.eval_env = deepcopy(env)

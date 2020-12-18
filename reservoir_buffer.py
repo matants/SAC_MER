@@ -35,9 +35,22 @@ class ReservoirBuffer(ReplayBuffer):
         and https://github.com/DLR-RM/stable-baselines3/pull/28#issuecomment-637559274
     """
 
+    def __init__(
+            self,
+            buffer_size: int,
+            observation_space: spaces.Space,
+            action_space: spaces.Space,
+            device: Union[th.device, str] = "cpu",
+            n_envs: int = 1,
+            optimize_memory_usage: bool = False,
+    ):
+        super().__init__(buffer_size, observation_space, action_space, device, n_envs=n_envs,
+                         optimize_memory_usage=optimize_memory_usage)
+        self.is_reservoir = True
+
     def add(self, obs: np.ndarray, next_obs: np.ndarray, action: np.ndarray, reward: np.ndarray, done: np.ndarray,
             experience_index: int) -> None:
-        if not self.full:
+        if not self.full or not self.is_reservoir:
             super().add(obs, next_obs, action, reward, done)
         else:
             pos = randint(0, experience_index)

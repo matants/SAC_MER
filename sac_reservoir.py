@@ -73,34 +73,34 @@ class ReservoirSAC(ReservoirOffPolicyAlgorithm):
     """
 
     def __init__(
-        self,
-        policy: Union[str, Type[SACPolicy]],
-        env: Union[GymEnv, str],
-        learning_rate: Union[float, Callable] = 3e-4,
-        buffer_size: int = int(1e6),
-        learning_starts: int = 100,
-        batch_size: int = 256,
-        tau: float = 0.005,
-        gamma: float = 0.99,
-        train_freq: int = 1,
-        gradient_steps: int = 1,
-        n_episodes_rollout: int = -1,
-        action_noise: Optional[ActionNoise] = None,
-        optimize_memory_usage: bool = False,
-        ent_coef: Union[str, float] = "auto",
-        target_update_interval: int = 1,
-        target_entropy: Union[str, float] = "auto",
-        use_sde: bool = False,
-        sde_sample_freq: int = -1,
-        use_sde_at_warmup: bool = False,
-        tensorboard_log: Optional[str] = None,
-        create_eval_env: bool = False,
-        policy_kwargs: Dict[str, Any] = None,
-        verbose: int = 0,
-        seed: Optional[int] = None,
-        device: Union[th.device, str] = "auto",
-        _init_setup_model: bool = True,
-        monitor_wrapper: bool = True,
+            self,
+            policy: Union[str, Type[SACPolicy]],
+            env: Union[GymEnv, str],
+            learning_rate: Union[float, Callable] = 3e-4,
+            buffer_size: int = int(1e6),
+            learning_starts: int = 100,
+            batch_size: int = 256,
+            tau: float = 0.005,
+            gamma: float = 0.99,
+            train_freq: int = 1,
+            gradient_steps: int = 1,
+            n_episodes_rollout: int = -1,
+            action_noise: Optional[ActionNoise] = None,
+            optimize_memory_usage: bool = False,
+            ent_coef: Union[str, float] = "auto",
+            target_update_interval: int = 1,
+            target_entropy: Union[str, float] = "auto",
+            use_sde: bool = False,
+            sde_sample_freq: int = -1,
+            use_sde_at_warmup: bool = False,
+            tensorboard_log: Optional[str] = None,
+            create_eval_env: bool = False,
+            policy_kwargs: Dict[str, Any] = None,
+            verbose: int = 0,
+            seed: Optional[int] = None,
+            device: Union[th.device, str] = "auto",
+            _init_setup_model: bool = True,
+            monitor_wrapper: bool = True,
     ):
 
         super(ReservoirSAC, self).__init__(
@@ -273,16 +273,16 @@ class ReservoirSAC(ReservoirOffPolicyAlgorithm):
             logger.record("train/ent_coef_loss", np.mean(ent_coef_losses))
 
     def learn(
-        self,
-        total_timesteps: int,
-        callback: MaybeCallback = None,
-        log_interval: int = 4,
-        eval_env: Optional[GymEnv] = None,
-        eval_freq: int = -1,
-        n_eval_episodes: int = 5,
-        tb_log_name: str = "SAC",
-        eval_log_path: Optional[str] = None,
-        reset_num_timesteps: bool = True,
+            self,
+            total_timesteps: int,
+            callback: MaybeCallback = None,
+            log_interval: int = 4,
+            eval_env: Optional[GymEnv] = None,
+            eval_freq: int = -1,
+            n_eval_episodes: int = 5,
+            tb_log_name: str = "SAC",
+            eval_log_path: Optional[str] = None,
+            reset_num_timesteps: bool = True,
     ) -> ReservoirOffPolicyAlgorithm:
 
         return super(ReservoirSAC, self).learn(
@@ -308,3 +308,37 @@ class ReservoirSAC(ReservoirOffPolicyAlgorithm):
         else:
             saved_pytorch_variables.append("ent_coef_tensor")
         return state_dicts, saved_pytorch_variables
+
+    def update_env(self, env, support_multi_env: bool = False, create_eval_env: bool = False,
+                   monitor_wrapper: bool = True, is_reservoir_replay: bool = True, reset_optimizers: bool = False,
+                   **kwargs):
+        """
+        Replace current env with new env.
+        :param env: Gym environment (activated, not a string).
+        :param support_multi_env: Whether the algorithm supports training
+        with multiple environments (as in A2C)
+        :param create_eval_env: Whether to create a second environment that will be
+            used for evaluating the agent periodically. (Only available when passing string for the environment)
+        :param monitor_wrapper: When creating an environment, whether to wrap it
+        or not in a Monitor wrapper.
+        :param is_reservoir_replay: Whether experience replay is normal or reservoir
+        :param reset_optimizers: Whether to reset optimizers (momentums, etc.).
+        :param kwargs: Does nothing, just so more arguments can pass without method failing
+        :return:
+        """
+        super().update_env(env, support_multi_env, create_eval_env, monitor_wrapper, is_reservoir_replay, **kwargs)
+
+        if reset_optimizers:
+            optimizers = []
+            if self.actor is not None:
+                optimizers.append(self.actor.optimizer)
+            if self.critic is not None:
+                optimizers.append(self.critic.optimizer)
+            if self.ent_coef_optimizer is not None:
+                optimizers.append(self.ent_coef_optimizer)
+
+            # Reset optimizers:
+            for i_optimizer, optimizer in enumerate(optimizers):
+                optimizer.__init__(optimizer.param_groups[0]['params'])
+                optimizers[i_optimizer] = optimizer
+
