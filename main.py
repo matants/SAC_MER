@@ -38,11 +38,13 @@ model = model_alg(MlpPolicy, env, verbose=2, buffer_size=10000, batch_size=64, l
 
 for i_length, length in enumerate([0.2, 0.1]):
     parameter_dict = {'length': length}
+    tb_log_name = 'run_' + str(i_length) + '_len_' + str(length)
     change_env_parameters(env, eval_env, parameter_dict=parameter_dict)
     model.update_env(env, monitor_wrapper=False, is_reservoir=True, reset_optimizers=False,
                      eval_env=eval_env)  # environment already wrapped so monitor_wrapper=False
-    model.learn(total_timesteps=1000, log_interval=1, reset_num_timesteps=False,
-                tb_log_name='run_' + str(i_length) + '_len_' + str(length))
+    model.learn(total_timesteps=300, log_interval=1, reset_num_timesteps=False, eval_freq=10,
+                eval_log_path=tensorboard_path + '/' + tb_log_name,
+                tb_log_name=tb_log_name)
     obs = env.reset()
     count = 0
     num_of_games_played = 0
@@ -51,7 +53,7 @@ for i_length, length in enumerate([0.2, 0.1]):
         count += 1
         action, _states = model.predict(obs, deterministic=True)
         obs, reward, done, info = env.step(action)
-        env.render()
+        # env.render()
         if done:
             print(f"Episode length: {count}")
             tot_counts.append(count)
@@ -61,7 +63,8 @@ for i_length, length in enumerate([0.2, 0.1]):
     print(f"Mean reward: {np.mean(tot_counts)}")
     all_result_means.append(np.mean(tot_counts))
 print(f"Means of experiments: {all_result_means}")
-model.save(model_alg.__name__ + "0.1")
+model.save(model_alg.__name__ + '__' + now)
+db = 1
 
 # del model  # remove to demonstrate saving and loading
 #
