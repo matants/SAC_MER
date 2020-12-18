@@ -80,15 +80,14 @@ class SACExpanded(SAC):
         self.update_env(env, support_multi_env=False, create_eval_env=create_eval_env, monitor_wrapper=monitor_wrapper,
                         reset_optimizers=False)
 
-    def update_env(self, env, support_multi_env: bool = False, create_eval_env: bool = False,
-                   monitor_wrapper: bool = True, reset_optimizers: bool = False, **kwargs):
+    def update_env(self, env, support_multi_env: bool = False,
+                   eval_env: Optional[GymEnv] = None, monitor_wrapper: bool = True, reset_optimizers: bool = False, **kwargs):
         """
         Replace current env with new env.
         :param env: Gym environment (activated, not a string).
         :param support_multi_env: Whether the algorithm supports training
         with multiple environments (as in A2C)
-        :param create_eval_env: Whether to create a second environment that will be
-            used for evaluating the agent periodically. (Only available when passing string for the environment)
+        :param eval_env: Environment to use for evaluation (optional).
         :param monitor_wrapper: When creating an environment, whether to wrap it
         or not in a Monitor wrapper.
         :param reset_optimizers: Whether to reset optimizers (momentums, etc.).
@@ -110,8 +109,8 @@ class SACExpanded(SAC):
                 optimizers[i_optimizer] = optimizer
 
         if env is not None:
-            if create_eval_env:
-                self.eval_env = deepcopy(env)
+            if eval_env is not None:
+                self.eval_env = eval_env
                 if monitor_wrapper:
                     self.eval_env = Monitor(self.eval_env, filename=None)
 

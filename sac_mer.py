@@ -149,7 +149,7 @@ class SACMER(ReservoirSAC):
         if is_mer:
             self.train_mer(gradient_steps, batch_size)
         else:
-            pass
+            raise NotImplementedError("Implement standard training.") #TODO
 
     def train_mer(self, gradient_steps: int, batch_size: int = 64) -> None:
         # Update optimizers learning rate

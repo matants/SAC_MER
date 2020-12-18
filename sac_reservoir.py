@@ -309,7 +309,7 @@ class ReservoirSAC(ReservoirOffPolicyAlgorithm):
             saved_pytorch_variables.append("ent_coef_tensor")
         return state_dicts, saved_pytorch_variables
 
-    def update_env(self, env, support_multi_env: bool = False, create_eval_env: bool = False,
+    def update_env(self, env, support_multi_env: bool = False, eval_env: Optional[GymEnv] = None,
                    monitor_wrapper: bool = True, is_reservoir_replay: bool = True, reset_optimizers: bool = False,
                    **kwargs):
         """
@@ -317,8 +317,7 @@ class ReservoirSAC(ReservoirOffPolicyAlgorithm):
         :param env: Gym environment (activated, not a string).
         :param support_multi_env: Whether the algorithm supports training
         with multiple environments (as in A2C)
-        :param create_eval_env: Whether to create a second environment that will be
-            used for evaluating the agent periodically. (Only available when passing string for the environment)
+        :param eval_env: Environment to use for evaluation.
         :param monitor_wrapper: When creating an environment, whether to wrap it
         or not in a Monitor wrapper.
         :param is_reservoir_replay: Whether experience replay is normal or reservoir
@@ -326,7 +325,7 @@ class ReservoirSAC(ReservoirOffPolicyAlgorithm):
         :param kwargs: Does nothing, just so more arguments can pass without method failing
         :return:
         """
-        super().update_env(env, support_multi_env, create_eval_env, monitor_wrapper, is_reservoir_replay, **kwargs)
+        super().update_env(env, support_multi_env, eval_env, monitor_wrapper, is_reservoir_replay, **kwargs)
 
         if reset_optimizers:
             optimizers = []
