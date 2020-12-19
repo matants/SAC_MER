@@ -30,14 +30,14 @@ def plot_single_run_results(npz_path):
     :return:
     """
     data = np.load(npz_path)
-    ep_lengths = data.f.ep_lengths
+    rewards = data.f.results.squeeze()
     timesteps = data.f.timesteps
-    cols = ['c' + str(i) for i in range(np.shape(ep_lengths)[1])]
-    cols_content = [ep_lengths[:, i] for i in range(np.shape(ep_lengths)[1])]
+    cols = ['c' + str(i) for i in range(np.shape(rewards)[1])]
+    cols_content = [rewards[:, i] for i in range(np.shape(rewards)[1])]
     d = {'timesteps': timesteps, **dict(zip(cols, cols_content))}
-    pd_data = pd.DataFrame(d).melt(id_vars='timesteps', value_vars=cols, value_name='ep_lengths')
+    pd_data = pd.DataFrame(d).melt(id_vars='timesteps', value_vars=cols, value_name='rewards')
 
-    sns.lineplot(data=pd_data, x='timesteps', y='ep_lengths')
+    sns.lineplot(data=pd_data, x='timesteps', y='rewards')
     plt.grid()
     plt.show()
     db = 1
@@ -49,5 +49,5 @@ if __name__ == '__main__':
     # change_env_parameters(env, parameter_dict=parameter_dict)
     # print(env)
 
-    npz_path = './run_1_len_0.1/evaluations.npz'
+    npz_path = './SEE_IF_RUN_experiments__2020_12_19__22_09/SAC_no_reset/final_only/tb_0/run_0_len_0.2/running_eval'
     plot_single_run_results(npz_path)

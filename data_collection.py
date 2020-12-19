@@ -12,23 +12,23 @@ from sac_expanded import SACExpanded
 from stable_baselines3.sac import MlpPolicy
 import gym_continuouscartpole  # not necessary to import but this checks if it is installed
 from utils import change_env_parameters
-from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.callbacks import EvalCallback, CallbackList, EventCallback
 
-NUM_OF_REDOS = 10
-EVAL_FREQ = 10
-N_EVAL_EPISODES = 5
+NUM_OF_REDOS = 2
+EVAL_FREQ = 5
+N_EVAL_EPISODES = 2
 
 env_name = 'gym_continuouscartpole:ContinuousCartPole-v1'
 model_algs = [ReservoirSAC, SACMER]
-buffer_sizes = [10000, 1000, 100]
+buffer_sizes = [4000, 1000, 100]
 
 now = datetime.now().strftime("%Y_%m_%d__%H_%M")
-save_path = './JUST_TRY_experiments__' + now + '/'
+save_path = './SEE_IF_RUN_experiments__' + now + '/'
 
 
 def train_alg(model_alg, reset_optimizers, buffer_size, subsave, iteration, last_round_no_mer, is_evolving):
     lengths = [0.5, 0.4, 0.3, 0.2]
-    training_timesteps = 1000
+    training_timesteps = 10
     if not is_evolving:
         training_timesteps *= len(lengths)
         lengths = [lengths[-1]]
@@ -47,7 +47,7 @@ def train_alg(model_alg, reset_optimizers, buffer_size, subsave, iteration, last
         'optimizer_kwargs': optimizer_kwargs,
     }
     model = model_alg(MlpPolicy, env, verbose=2, buffer_size=buffer_size, batch_size=64, learning_rate=3e-4,
-                      learning_starts=100,
+                      learning_starts=2,
                       gradient_steps=4, policy_kwargs=policy_kwargs, mer_s=2, mer_gamma=0.3, monitor_wrapper=True,
                       tensorboard_log=tensorboard_path)
 
@@ -61,27 +61,33 @@ def train_alg(model_alg, reset_optimizers, buffer_size, subsave, iteration, last
         else:  # This will not have any effect on regular SAC
             is_reservoir = True
             is_mer = True
-        model.update_env(env, monitor_wrapper=False, is_reservoir=is_reservoir, reset_optimizers=reset_optimizers,
-                         eval_env=eval_env)  # environment already wrapped so monitor_wrapper=False
+        model.update_env(env, monitor_wrapper=False, is_reservoir=is_reservoir,
+                         reset_optimizers=reset_optimizers)  # environment already wrapped so monitor_wrapper=False
+        eval_callback = EvalCallback(eval_env,
+                                     best_model_save_path=None,
+                                     log_path=tensorboard_path + '/' + log_name + '/running_eval',
+                                     eval_freq=EVAL_FREQ,
+                                     n_eval_episodes=N_EVAL_EPISODES,
+                                     deterministic=True, render=False)
         if is_evolving:
             final_eval_callback = EvalCallback(final_eval_env,
-                                               best_model_save_path=tensorboard_path + '/' + log_name + '/final_eval',
+                                               best_model_save_path=None,
                                                log_path=tensorboard_path + '/' + log_name + '/final_eval',
                                                eval_freq=EVAL_FREQ,
                                                n_eval_episodes=N_EVAL_EPISODES,
                                                deterministic=True, render=False)
         else:
-            final_eval_callback = None
-        model.learn(total_timesteps=1000, log_interval=1, reset_num_timesteps=False, eval_freq=EVAL_FREQ,
-                    n_eval_episodes=N_EVAL_EPISODES,
-                    eval_log_path=tensorboard_path + '/' + log_name + '/running_eval',
-                    tb_log_name=log_name, is_mer=is_mer, callback=final_eval_callback)
+            final_eval_callback = EventCallback()
+        model.learn(total_timesteps=training_timesteps, log_interval=1, reset_num_timesteps=False,
+                    tb_log_name=log_name, is_mer=is_mer, callback=CallbackList([eval_callback, final_eval_callback]))
         env.reset()
         eval_env.reset()
-    model.save(subsave + 'model_' + str(iteration))
+    if iteration == 0:  # saving models fills up storage, so we only save one (which we will also probably not use)
+        model.save(subsave + 'model_' + str(iteration))
     print(f"Done. Total time = {time() - start_time} seconds.")
 
 
+total_start_time = time()
 ################################################################
 # SACMER - no changes
 ################################################################
@@ -127,7 +133,7 @@ for buffer_size in buffer_sizes:
 ################################################################
 # SAC - with optimizer reset between environment updates
 ################################################################
-subsave = save_path + 'SAC_no_reset/'
+subsave = save_path + 'SAC_with_reset/'
 model_alg = SACExpanded
 reset_optimizers = True
 last_round_no_mer = False
@@ -137,3 +143,5 @@ for buffer_size in buffer_sizes:
                   is_evolving=True)
         # train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
         #           is_evolving=False)  # not necessary, this was already tested since there are no optimizer resets if only training on final env
+
+print(f'All done! Total time = {time() - total_start_time} seconds.')
