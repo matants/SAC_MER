@@ -14,21 +14,21 @@ import gym_continuouscartpole  # not necessary to import but this checks if it i
 from utils import change_env_parameters
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList, EventCallback
 
-NUM_OF_REDOS = 2
-EVAL_FREQ = 5
-N_EVAL_EPISODES = 2
+NUM_OF_REDOS = 10
+EVAL_FREQ = 10
+N_EVAL_EPISODES = 5
 
 env_name = 'gym_continuouscartpole:ContinuousCartPole-v1'
 model_algs = [ReservoirSAC, SACMER]
 buffer_sizes = [4000, 1000, 100]
 
 now = datetime.now().strftime("%Y_%m_%d__%H_%M")
-save_path = './SEE_IF_RUN_experiments__' + now + '/'
+save_path = './experiments__' + now + '/'
 
 
 def train_alg(model_alg, reset_optimizers, buffer_size, subsave, iteration, last_round_no_mer, is_evolving):
     lengths = [0.5, 0.4, 0.3, 0.2]
-    training_timesteps = 10
+    training_timesteps = 1000
     if not is_evolving:
         training_timesteps *= len(lengths)
         lengths = [lengths[-1]]
@@ -47,7 +47,7 @@ def train_alg(model_alg, reset_optimizers, buffer_size, subsave, iteration, last
         'optimizer_kwargs': optimizer_kwargs,
     }
     model = model_alg(MlpPolicy, env, verbose=2, buffer_size=buffer_size, batch_size=64, learning_rate=3e-4,
-                      learning_starts=2,
+                      learning_starts=100,
                       gradient_steps=4, policy_kwargs=policy_kwargs, mer_s=2, mer_gamma=0.3, monitor_wrapper=True,
                       tensorboard_log=tensorboard_path)
 
@@ -91,11 +91,12 @@ total_start_time = time()
 ################################################################
 # SACMER - no changes
 ################################################################
-subsave = save_path + 'SACMER_no_end_standard/'
+source_subsave = save_path + 'SACMER_no_end_standard/'
 model_alg = SACMER
 reset_optimizers = False
 last_round_no_mer = False
 for buffer_size in buffer_sizes:
+    subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
                   is_evolving=True)
@@ -105,11 +106,12 @@ for buffer_size in buffer_sizes:
 ################################################################
 # SACMER - final training round is standard
 ################################################################
-subsave = save_path + 'SACMER_end_standard/'
+source_subsave = save_path + 'SACMER_end_standard/'
 model_alg = SACMER
 reset_optimizers = False
 last_round_no_mer = True
 for buffer_size in buffer_sizes:
+    subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
                   is_evolving=True)
@@ -119,11 +121,12 @@ for buffer_size in buffer_sizes:
 ################################################################
 # SAC - no optimizer reset between environment updates
 ################################################################
-subsave = save_path + 'SAC_no_reset/'
+source_subsave = save_path + 'SAC_no_reset/'
 model_alg = SACExpanded
 reset_optimizers = False
 last_round_no_mer = False
 for buffer_size in buffer_sizes:
+    subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
                   is_evolving=True)
@@ -133,11 +136,12 @@ for buffer_size in buffer_sizes:
 ################################################################
 # SAC - with optimizer reset between environment updates
 ################################################################
-subsave = save_path + 'SAC_with_reset/'
+source_subsave = save_path + 'SAC_with_reset/'
 model_alg = SACExpanded
 reset_optimizers = True
 last_round_no_mer = False
 for buffer_size in buffer_sizes:
+    subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
                   is_evolving=True)
