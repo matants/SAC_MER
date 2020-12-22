@@ -343,7 +343,11 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
         """
         Write log.
         """
-        fps = int(self.num_timesteps / (time.time() - self.start_time))
+        try:
+            fps = int(self.num_timesteps / (time.time() - self.start_time))
+        except ZeroDivisionError:
+            warnings.warn("fps dump had zero division somehow, storing 0 instead.")
+            fps = 0
         logger.record("time/episodes", self._episode_num, exclude="tensorboard")
         if len(self.ep_info_buffer) > 0 and len(self.ep_info_buffer[0]) > 0:
             logger.record("rollout/ep_rew_mean", safe_mean([ep_info["r"] for ep_info in self.ep_info_buffer]))
