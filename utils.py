@@ -24,13 +24,12 @@ def change_env_parameters(env: GymEnv, eval_env: Optional[GymEnv] = None, parame
             assert getattr(eval_env.env, parameter) == parameter_dict[parameter], "Set attribute failed!"
 
 
-def plot_single_run_results(npz_path):
+def plot_single_run_results(pd_data):
     """
 
     :param npz_path:
     :return:
     """
-    pd_data = convert_npz_to_dataframe(npz_path)
     sns.lineplot(data=pd_data, x='timesteps', y='rewards')
     plt.grid()
     plt.show()
@@ -48,11 +47,140 @@ def convert_npz_to_dataframe(npz_path):
     return pd_data
 
 
+def merge_tbs__final_only(root_path):
+    files_of_data = []
+    for root, dirs, files in os.walk(root_path):
+        if len(files) >= 1:
+            if files[0].split('.')[-1] == 'npz':
+                files_of_data.append(root + '/' + files[0])
+    df_list = []
+    for fname in files_of_data:
+        df_list.append(convert_npz_to_dataframe(fname))
+    return pd.concat(df_list)
+
+
+def merge_tbs__evolving(root_path, env_ind, is_final_eval):
+    if is_final_eval:
+        dname = 'final_eval'
+    else:
+        dname = 'running_eval'
+    files_of_data = []
+    for root, dirs, files in os.walk(root_path):
+        if len(files) >= 1:
+            if (files[0].split('.')[-1] == 'npz') and (f'run_{env_ind}' in root) and (dname in root):
+                files_of_data.append(root + '/' + files[0])
+    df_list = []
+    for fname in files_of_data:
+        df_list.append(convert_npz_to_dataframe(fname))
+    return pd.concat(df_list)
+
+
+def merge_tbs__evolving__all_envs_together(root_path, is_final_eval):
+    if is_final_eval:
+        dname = 'final_eval'
+    else:
+        dname = 'running_eval'
+    files_of_data = []
+    for root, dirs, files in os.walk(root_path):
+        if len(files) >= 1:
+            if (files[0].split('.')[-1] == 'npz') and (dname in root):
+                files_of_data.append(root + '/' + files[0])
+    df_list = []
+    for fname in files_of_data:
+        df_list.append(convert_npz_to_dataframe(fname))
+    return pd.concat(df_list)
+
+
 if __name__ == '__main__':
     # env = gym.make('CartPole-v0')
     # parameter_dict = {'length': 1}
     # change_env_parameters(env, parameter_dict=parameter_dict)
     # print(env)
 
-    npz_path = './SEE_IF_RUN_experiments__2020_12_19__22_09/SAC_no_reset/final_only/tb_0/run_0_len_0.2/running_eval/evaluations.npz'
-    plot_single_run_results(npz_path)
+    # npz_path = './SEE_IF_RUN_experiments__2020_12_19__22_09/SAC_no_reset/final_only/tb_0/run_0_len_0.2/running_eval/evaluations.npz'
+    # plot_single_run_results(convert_npz_to_dataframe(npz_path))
+
+    # final_only_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2020_12_20__23_37/SAC_no_reset/buffer_4000/final_only'
+    # df = merge_tbs__final_only(final_only_path)
+    # plot_single_run_results(df)
+
+    # evolving_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2020_12_20__23_37/SAC_no_reset/buffer_4000/evolving'
+    # df_final_eval = merge_tbs__evolving(evolving_path, 2, True)
+    # df_running_eval = merge_tbs__evolving(evolving_path, 2, False)
+    # sns.lineplot(data=df_final_eval, x='timesteps', y='rewards')
+    # sns.lineplot(data=df_running_eval, x='timesteps', y='rewards')
+    # plt.legend(['final eval', 'running eval'])
+    # plt.show()
+
+    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2020_12_20__23_37/'
+    NUM_ENVS = 4
+    ############################################################################################
+    # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch sizes? nah)
+    ############################################################################################
+    # algorithms_dirs = ['SAC_no_reset', 'SACMER_no_end_standard']
+    # algorithms_names = ['SAC', 'SAC + MER']
+    # buffer_sizes = [4000, 1000, 100]
+    # for buffer in buffer_sizes:
+    #     df_arr = []
+    #     for i_alg, alg in enumerate(algorithms_dirs):
+    #         path = root_path + alg + f'/buffer_{buffer}/final_only'
+    #         df = merge_tbs__final_only(path)
+    #         df_arr.append(df)
+    #         sns.lineplot(data=df, x='timesteps', y='rewards')
+    #     plt.legend(algorithms_names)
+    #     plt.suptitle(f'Buffer size = {buffer}')
+    #     plt.xlabel('Steps')
+    #     plt.ylabel('Reward')
+    #     plt.grid()
+    #     plt.show()
+
+    ############################################################################################
+    # Comparing evolving running_eval_between all algorithms
+    ############################################################################################
+    algorithms_dirs = ['SAC_no_reset', 'SAC_with_reset', 'SACMER_no_end_standard', 'SACMER_end_standard']
+    algorithms_names = ['SAC (without optimizer resets)', 'SAC (with optimizer resets between envs)', 'SAC + MER',
+                        'SAC + MER (final env regular SAC)']
+    buffer_sizes = [4000, 1000, 100]
+    env_switch_times = [1000, 2000, 3000]
+    for buffer in buffer_sizes:
+        df_arr = []
+        for i_alg, alg in enumerate(algorithms_dirs):
+            path = root_path + alg + f'/buffer_{buffer}/evolving'
+            df = merge_tbs__evolving__all_envs_together(path, is_final_eval=False)
+            df_arr.append(df)
+            sns.lineplot(data=df, x='timesteps', y='rewards')
+        plt.legend(algorithms_names)
+        plt.suptitle(f'Buffer size = {buffer}')
+        plt.xlabel('Steps')
+        plt.ylabel('Reward')
+        for x in env_switch_times:
+            plt.axvline(x=x)
+        plt.grid()
+        plt.show()
+
+    ############################################################################################
+    # Preparing wsork with different colors for each env
+    ############################################################################################
+
+    # algorithms_dirs = ['SAC_no_reset', 'SAC_with_reset', 'SACMER_no_end_standard', 'SACMER_end_standard']
+    # algorithms_names = ['SAC (without optimizer resets)', 'SAC (with optimizer resets between envs)', 'SAC + MER',
+    #                     'SAC + MER (final env regular SAC)']
+    # colors = ['red', 'orange', 'blue', 'purple']
+    # buffer_sizes = [4000, 1000, 100]
+    # env_switch_times = [0, 1000, 2000, 3000]
+    # for buffer in buffer_sizes:
+    #     df_arr = []
+    #     for i_alg, alg in enumerate(algorithms_dirs):
+    #         for i_env in range(NUM_ENVS):
+    #             path = root_path + alg + f'/buffer_{buffer}/evolving'
+    #             df = merge_tbs__evolving(path, is_final_eval=False, env_ind=i_env)
+    #             df_arr.append(df)
+    #             sns.lineplot(data=df, x='timesteps', y='rewards', palette=(colors[i_alg],))
+    #     plt.legend(algorithms_names)
+    #     plt.suptitle(f'Buffer size = {buffer}')
+    #     plt.xlabel('Steps')
+    #     plt.ylabel('Reward')
+    #     for x in env_switch_times:
+    #         plt.axvline(x=x)
+    #     plt.grid()
+    #     plt.show()
