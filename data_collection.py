@@ -14,13 +14,13 @@ import gym_continuouscartpole  # not necessary to import but this checks if it i
 from utils import change_env_parameters
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList, EventCallback
 
-NUM_OF_REDOS = 10
+NUM_OF_REDOS = 5
 EVAL_FREQ = 10
-N_EVAL_EPISODES = 5
+N_EVAL_EPISODES = 10
 
 env_name = 'gym_continuouscartpole:ContinuousCartPole-v1'
 model_algs = [ReservoirSAC, SACMER]
-buffer_sizes = [4000, 1000, 100]
+buffer_sizes = [40000, 5000, 256]
 
 now = datetime.now().strftime("%Y_%m_%d__%H_%M")
 save_path = './experiments__' + now + '/'
@@ -28,7 +28,7 @@ save_path = './experiments__' + now + '/'
 
 def train_alg(model_alg, reset_optimizers, buffer_size, subsave, iteration, last_round_no_mer, is_evolving):
     lengths = [0.5, 0.4, 0.3, 0.2]
-    training_timesteps = 1000
+    training_timesteps = 10000
     if not is_evolving:
         training_timesteps *= len(lengths)
         lengths = [lengths[-1]]
@@ -47,7 +47,7 @@ def train_alg(model_alg, reset_optimizers, buffer_size, subsave, iteration, last
         'optimizer_kwargs': optimizer_kwargs,
     }
     model = model_alg(MlpPolicy, env, verbose=2, buffer_size=buffer_size, batch_size=64, learning_rate=3e-4,
-                      learning_starts=100,
+                      learning_starts=256,
                       gradient_steps=4, policy_kwargs=policy_kwargs, mer_s=2, mer_gamma=0.3, monitor_wrapper=True,
                       tensorboard_log=tensorboard_path)
 
