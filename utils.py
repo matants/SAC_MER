@@ -1,11 +1,38 @@
 import gym
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from collections import namedtuple
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback
 import seaborn as sns
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from random import random
 import os
+
+Param = namedtuple('Param', ['mean', 'half_range'])
+
+
+class AlternatingParamsUniform:
+    def __init__(self, params_dict):
+        self.params_dict = params_dict
+
+    def sample1(self):
+        ret_dict = {}
+        for key in self.params_dict:
+            param = self.params_dict[key]
+            param_val = (random() - 0.5) * 2 * param.half_range + param.mean
+            ret_dict[key] = param_val
+        return ret_dict
+
+    def sample(self, n):
+        return [self.sample1() for _ in range(n)]
+
+    def sample1_means(self):
+        ret_dict = {}
+        for key in self.params_dict:
+            param = self.params_dict[key]
+            ret_dict[key] = param.mean
+        return ret_dict
 
 
 def change_env_parameters(env: GymEnv, eval_env: Optional[GymEnv] = None, parameter_dict: Dict = {}):
@@ -97,14 +124,17 @@ if __name__ == '__main__':
     # change_env_parameters(env, parameter_dict=parameter_dict)
     # print(env)
 
-    # npz_path = './SEE_IF_RUN_experiments__2020_12_19__22_09/SAC_no_reset/final_only/tb_0/run_0_len_0.2/running_eval/evaluations.npz'
+    # npz_path = './SEE_IF_RUN_experiments__2020_12_19__22_09/SAC_no_reset/final_only/tb_0/run_0_len_0.2/running_eval
+    # /evaluations.npz'
     # plot_single_run_results(convert_npz_to_dataframe(npz_path))
 
-    # final_only_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2020_12_20__23_37/SAC_no_reset/buffer_4000/final_only'
+    # final_only_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2020_12_20__23_37/SAC_no_reset/buffer_4000
+    # /final_only'
     # df = merge_tbs__final_only(final_only_path)
     # plot_single_run_results(df)
 
-    # evolving_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2020_12_20__23_37/SAC_no_reset/buffer_4000/evolving'
+    # evolving_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2020_12_20__23_37/SAC_no_reset/buffer_4000
+    # /evolving'
     # df_final_eval = merge_tbs__evolving(evolving_path, 2, True)
     # df_running_eval = merge_tbs__evolving(evolving_path, 2, False)
     # sns.lineplot(data=df_final_eval, x='timesteps', y='rewards')
@@ -112,14 +142,15 @@ if __name__ == '__main__':
     # plt.legend(['final eval', 'running eval'])
     # plt.show()
 
-    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2020_12_25__19_40__2nd/'
-    NUM_ENVS = 4
+    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2020_12_30__00_00/'
+    NUM_ENVS = 11
     ############################################################################################
-    # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch sizes? nah)
+    # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
+    # sizes? nah)
     ############################################################################################
     # algorithms_dirs = ['SAC_no_reset', 'SACMER_no_end_standard']
     # algorithms_names = ['SAC', 'SAC + MER']
-    # buffer_sizes = [4000, 1000, 100]
+    # buffer_sizes = [40000, 5000, 256]
     # for buffer in buffer_sizes:
     #     df_arr = []
     #     for i_alg, alg in enumerate(algorithms_dirs):
@@ -141,7 +172,7 @@ if __name__ == '__main__':
     algorithms_names = ['SAC (without optimizer resets)', 'SAC (with optimizer resets between envs)', 'SAC + MER',
                         'SAC + MER (final env regular SAC)']
     buffer_sizes = [40000, 5000, 256]
-    env_switch_times = [10000, 20000, 30000]
+    env_switch_times = []#10000, 20000, 30000]
     for buffer in buffer_sizes:
         df_arr = []
         for i_alg, alg in enumerate(algorithms_dirs):
