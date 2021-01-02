@@ -157,13 +157,13 @@ if __name__ == '__main__':
     # plt.legend(['final eval', 'running eval'])
     # plt.show()
 
-    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_01_02__13_17__SACMER_P_BS_5/'
+    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_01_02__19_01/'
     NUM_ENVS = 11
     ############################################################################################
     # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
     # sizes? nah)
     ############################################################################################
-    algorithms_dirs = ['SAC_no_reset', 'SACMER_P_no_end_standard']
+    algorithms_dirs = ['SAC_no_reset', 'SACMER_T_no_end_standard']
     algorithms_names = ['SAC', 'SAC + MER']
     buffer_sizes = [30000]  # , 5000, 256]
     for buffer in buffer_sizes:
@@ -184,7 +184,7 @@ if __name__ == '__main__':
     ############################################################################################
     # Comparing evolving running_eval_between all algorithms
     ############################################################################################
-    algorithms_dirs = ['SAC_no_reset', 'SAC_with_reset', 'SACMER_P_no_end_standard', 'SACMER_P_end_standard']
+    algorithms_dirs = ['SAC_no_reset', 'SAC_with_reset', 'SACMER_T_no_end_standard', 'SACMER_T_end_standard']
     algorithms_names = ['SAC (without optimizer resets)', 'SAC (with optimizer resets between envs)', 'SAC + MER',
                         'SAC + MER (final env regular SAC)']
     buffer_sizes = [30000]  # , 5000, 256]
@@ -210,8 +210,8 @@ if __name__ == '__main__':
     # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
     # sizes? nah)
     ############################################################################################
-    algorithms_dirs = ['SACMER_no_end_standard', 'SACMER_P_no_end_standard']
-    algorithms_names = ['SACMER', 'SACMER_P']
+    algorithms_dirs = ['SACMER_no_end_standard', 'SACMER_T_no_end_standard']
+    algorithms_names = ['SACMER', 'SACMER_T']
     buffer_sizes = [30000]  # , 5000, 256]
     for buffer in buffer_sizes:
         df_arr = []
@@ -231,12 +231,12 @@ if __name__ == '__main__':
     ############################################################################################
     # Comparing evolving running_eval_between all algorithms
     ############################################################################################
-    algorithms_dirs = ['SACMER_no_end_standard', 'SACMER_end_standard', 'SACMER_P_no_end_standard',
-                       'SACMER_P_end_standard']
+    algorithms_dirs = ['SACMER_no_end_standard', 'SACMER_end_standard', 'SACMER_T_no_end_standard',
+                       'SACMER_T_end_standard']
     algorithms_names = ['SAC + MER',
                         'SAC + MER (final env regular SAC)',
-                        'SAC + MER_P',
-                        'SAC + MER_P (final env regular SAC)',
+                        'SAC + MER_T',
+                        'SAC + MER_T (final env regular SAC)',
                         ]
     buffer_sizes = [30000]  # , 5000, 256]
     env_switch_times = []  # 10000, 20000, 30000]
