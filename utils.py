@@ -111,6 +111,7 @@ def merge_tbs__evolving(root_path, env_ind, is_final_eval):
     else:
         return pd.concat(df_list)
 
+
 def merge_tbs__evolving__all_envs_together(root_path, is_final_eval):
     if is_final_eval:
         dname = 'final_eval'
@@ -130,6 +131,7 @@ def merge_tbs__evolving__all_envs_together(root_path, is_final_eval):
         return df_list[0]
     else:
         return pd.concat(df_list)
+
 
 if __name__ == '__main__':
     # env = gym.make('CartPole-v0')
@@ -155,64 +157,15 @@ if __name__ == '__main__':
     # plt.legend(['final eval', 'running eval'])
     # plt.show()
 
-    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_01_01__16_59/'
+    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_01_02__13_17__SACMER_P_BS_5/'
     NUM_ENVS = 11
-    # ############################################################################################
-    # # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
-    # # sizes? nah)
-    # ############################################################################################
-    # algorithms_dirs = ['SAC_no_reset', 'SACMER_Q_no_end_standard']
-    # algorithms_names = ['SAC', 'SAC + MER']
-    # buffer_sizes = [30000]#, 5000, 256]
-    # for buffer in buffer_sizes:
-    #     df_arr = []
-    #     for i_alg, alg in enumerate(algorithms_dirs):
-    #         path = root_path + alg + f'/buffer_{buffer}/final_only'
-    #         df = merge_tbs__final_only(path)
-    #         df_arr.append(df)
-    #         sns.lineplot(data=df, x='timesteps', y='rewards')
-    #     plt.legend(algorithms_names)
-    #     plt.suptitle(f'Buffer size = {buffer}')
-    #     plt.xlabel('Steps')
-    #     plt.ylabel('Reward')
-    #     plt.axhline(y=500)
-    #     plt.grid()
-    #     plt.show()
-    #
-    # ############################################################################################
-    # # Comparing evolving running_eval_between all algorithms
-    # ############################################################################################
-    # algorithms_dirs = ['SAC_no_reset', 'SAC_with_reset', 'SACMER_Q_no_end_standard', 'SACMER_Q_end_standard']
-    # algorithms_names = ['SAC (without optimizer resets)', 'SAC (with optimizer resets between envs)', 'SAC + MER',
-    #                     'SAC + MER (final env regular SAC)']
-    # buffer_sizes = [30000]#, 5000, 256]
-    # env_switch_times = []#10000, 20000, 30000]
-    # for buffer in buffer_sizes:
-    #     df_arr = []
-    #     for i_alg, alg in enumerate(algorithms_dirs):
-    #         path = root_path + alg + f'/buffer_{buffer}/evolving'
-    #         df = merge_tbs__evolving__all_envs_together(path, is_final_eval=False)
-    #         df_arr.append(df)
-    #         sns.lineplot(data=df, x='timesteps', y='rewards')
-    #     plt.legend(algorithms_names)
-    #     plt.suptitle(f'Buffer size = {buffer}')
-    #     plt.xlabel('Steps')
-    #     plt.ylabel('Reward')
-    #     for x in env_switch_times:
-    #         plt.axvline(x=x)
-    #     plt.axhline(y=500)
-    #     plt.grid()
-    #     plt.show()
-
-
-
-############################################################################################
+    ############################################################################################
     # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
     # sizes? nah)
     ############################################################################################
-    algorithms_dirs = ['SACMER_no_end_standard', 'SACMER_Q_no_end_standard']
-    algorithms_names = ['SACMER', 'SACMER_Q']
-    buffer_sizes = [30000]#, 5000, 256]
+    algorithms_dirs = ['SAC_no_reset', 'SACMER_P_no_end_standard']
+    algorithms_names = ['SAC', 'SAC + MER']
+    buffer_sizes = [30000]  # , 5000, 256]
     for buffer in buffer_sizes:
         df_arr = []
         for i_alg, alg in enumerate(algorithms_dirs):
@@ -231,14 +184,62 @@ if __name__ == '__main__':
     ############################################################################################
     # Comparing evolving running_eval_between all algorithms
     ############################################################################################
-    algorithms_dirs = ['SACMER_no_end_standard', 'SACMER_end_standard', 'SACMER_Q_no_end_standard', 'SACMER_Q_end_standard']
+    algorithms_dirs = ['SAC_no_reset', 'SAC_with_reset', 'SACMER_P_no_end_standard', 'SACMER_P_end_standard']
+    algorithms_names = ['SAC (without optimizer resets)', 'SAC (with optimizer resets between envs)', 'SAC + MER',
+                        'SAC + MER (final env regular SAC)']
+    buffer_sizes = [30000]  # , 5000, 256]
+    env_switch_times = []  # 10000, 20000, 30000]
+    for buffer in buffer_sizes:
+        df_arr = []
+        for i_alg, alg in enumerate(algorithms_dirs):
+            path = root_path + alg + f'/buffer_{buffer}/evolving'
+            df = merge_tbs__evolving__all_envs_together(path, is_final_eval=False)
+            df_arr.append(df)
+            sns.lineplot(data=df, x='timesteps', y='rewards')
+        plt.legend(algorithms_names)
+        plt.suptitle(f'Buffer size = {buffer}')
+        plt.xlabel('Steps')
+        plt.ylabel('Reward')
+        for x in env_switch_times:
+            plt.axvline(x=x)
+        plt.axhline(y=500)
+        plt.grid()
+        plt.show()
+
+    ############################################################################################
+    # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
+    # sizes? nah)
+    ############################################################################################
+    algorithms_dirs = ['SACMER_no_end_standard', 'SACMER_P_no_end_standard']
+    algorithms_names = ['SACMER', 'SACMER_P']
+    buffer_sizes = [30000]  # , 5000, 256]
+    for buffer in buffer_sizes:
+        df_arr = []
+        for i_alg, alg in enumerate(algorithms_dirs):
+            path = root_path + alg + f'/buffer_{buffer}/final_only'
+            df = merge_tbs__final_only(path)
+            df_arr.append(df)
+            sns.lineplot(data=df, x='timesteps', y='rewards')
+        plt.legend(algorithms_names)
+        plt.suptitle(f'Buffer size = {buffer}')
+        plt.xlabel('Steps')
+        plt.ylabel('Reward')
+        plt.axhline(y=500)
+        plt.grid()
+        plt.show()
+
+    ############################################################################################
+    # Comparing evolving running_eval_between all algorithms
+    ############################################################################################
+    algorithms_dirs = ['SACMER_no_end_standard', 'SACMER_end_standard', 'SACMER_P_no_end_standard',
+                       'SACMER_P_end_standard']
     algorithms_names = ['SAC + MER',
                         'SAC + MER (final env regular SAC)',
-                        'SAC + MER_Q',
-                        'SAC + MER_Q (final env regular SAC)',
+                        'SAC + MER_P',
+                        'SAC + MER_P (final env regular SAC)',
                         ]
-    buffer_sizes = [30000]#, 5000, 256]
-    env_switch_times = []#10000, 20000, 30000]
+    buffer_sizes = [30000]  # , 5000, 256]
+    env_switch_times = []  # 10000, 20000, 30000]
     for buffer in buffer_sizes:
         df_arr = []
         for i_alg, alg in enumerate(algorithms_dirs):

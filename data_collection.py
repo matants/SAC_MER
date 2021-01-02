@@ -10,7 +10,7 @@ from stable_baselines3 import SAC
 from sac_reservoir import ReservoirSAC
 from sac_mer import SACMER
 from sac_expanded import SACExpanded
-from sac_mer_variations import SACMER_Q
+from sac_mer_variations import SACMER_Q, SACMER_P
 from stable_baselines3.sac import MlpPolicy
 import gym_continuouscartpole  # not necessary to import but this checks if it is installed
 from utils import change_env_parameters, Param, AlternatingParamsUniform
@@ -18,6 +18,7 @@ from stable_baselines3.common.callbacks import EvalCallback, CallbackList, Event
 import pickle
 import os
 
+random.seed(685475327)
 NUM_OF_REDOS = 1  # how many times we run the training loops (for confidence bounds)
 EVAL_FREQ = 100
 N_EVAL_EPISODES = 10
@@ -27,7 +28,7 @@ MER_GAMMA = 0.3
 BATCH_SIZE = 128
 LEARNING_RATE = 3e-4
 LEARNING_STARTS = 256
-GRADIENT_STEPS = 4
+GRADIENT_STEPS = 5
 META_TRAINING_TIMESTEPS = 2000
 FINAL_TRAINING_TIMESTEPS = 10000
 
@@ -177,26 +178,26 @@ total_start_time = time()
 #         #           if only training on final env
 #
 #
-# ################################################################
-# # SACMER_Q - no changes
-# ################################################################
-# source_subsave = save_path + 'SACMER_Q_no_end_standard/'
-# model_alg = SACMER_Q
-# reset_optimizers = False
-# last_round_no_mer = False
-# for buffer_size in buffer_sizes:
-#     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
-#     for i in range(NUM_OF_REDOS):
-#         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
-#                   is_evolving=True)
-#         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
-#                   is_evolving=False)
+################################################################
+# SACMER_Q - no changes
+################################################################
+source_subsave = save_path + 'SACMER_P_no_end_standard/'
+model_alg = SACMER_P
+reset_optimizers = False
+last_round_no_mer = False
+for buffer_size in buffer_sizes:
+    subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
+    for i in range(NUM_OF_REDOS):
+        train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
+                  is_evolving=True)
+        train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
+                  is_evolving=False)
 
 ################################################################
 # SACMER_Q - final training round is standard
 ################################################################
-source_subsave = save_path + 'SACMER_Q_end_standard/'
-model_alg = SACMER_Q
+source_subsave = save_path + 'SACMER_P_end_standard/'
+model_alg = SACMER_P
 reset_optimizers = False
 last_round_no_mer = True
 for buffer_size in buffer_sizes:
