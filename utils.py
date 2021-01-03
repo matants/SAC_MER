@@ -35,6 +35,27 @@ class AlternatingParamsUniform:
         return ret_dict
 
 
+class AlternatingParamsOnCircle:
+    def __init__(self, params_dict):
+        self.params_dict = params_dict
+        self.radius = np.sqrt(np.sum([params_dict[i] ** 2 for i in params_dict]))
+
+    def sample1(self):
+        ret_dict = {}
+        angle = random() * 2 * np.pi
+        for i_key, key in enumerate(self.params_dict):
+            if i_key == 0:
+                ret_dict[key] = self.radius * np.cos(angle)
+            if i_key == 1:
+                ret_dict[key] = self.radius * np.sin(angle)
+        return ret_dict
+
+    def sample(self, n):
+        return [self.sample1() for _ in range(n)]
+
+    def sample1_means(self):
+        return self.params_dict
+
 def change_env_parameters(env: GymEnv, eval_env: Optional[GymEnv] = None, parameter_dict: Dict = {}):
     '''
 
