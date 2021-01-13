@@ -56,6 +56,28 @@ class AlternatingParamsOnCircle:
     def sample1_means(self):
         return self.params_dict
 
+
+class AlternatingParamsSemiCircleBot:
+    def __init__(self, params_dict):
+        self.params_dict = params_dict
+        self.radius = np.linalg.norm(params_dict['_goal'])
+
+    def sample1(self):
+        ret_dict = {}
+        angle = random() * np.pi
+        ret_dict['_goal'] = np.array([self.radius * np.cos(angle), self.radius * np.sin(angle)])
+        ret_dict['goals'] = [np.array([self.radius * np.cos(angle), self.radius * np.sin(angle)])]
+        ret_dict['_state'] = np.array([0, 0])
+        ret_dict['modify_init_state_dist'] = False
+        return ret_dict
+
+    def sample(self, n):
+        return [self.sample1() for _ in range(n)]
+
+    def sample1_means(self):
+        return self.params_dict
+
+
 def change_env_parameters(env: GymEnv, eval_env: Optional[GymEnv] = None, parameter_dict: Dict = {}):
     '''
 
@@ -65,11 +87,19 @@ def change_env_parameters(env: GymEnv, eval_env: Optional[GymEnv] = None, parame
     :return:
     '''
     for parameter in parameter_dict:
-        setattr(env.env, parameter, parameter_dict[parameter])
-        assert getattr(env.env, parameter) == parameter_dict[parameter], "Set attribute failed!"
+        try:
+            where_to_change = env.env
+        except AttributeError:
+            where_to_change = env
+        setattr(where_to_change, parameter, parameter_dict[parameter])
+        # assert getattr(where_to_change, parameter) == parameter_dict[parameter], "Set attribute failed!"
         if eval_env is not None:
-            setattr(eval_env.env, parameter, parameter_dict[parameter])
-            assert getattr(eval_env.env, parameter) == parameter_dict[parameter], "Set attribute failed!"
+            try:
+                where_to_change = eval_env.env
+            except AttributeError:
+                where_to_change = eval_env
+            setattr(where_to_change, parameter, parameter_dict[parameter])
+            # assert getattr(where_to_change, parameter) == parameter_dict[parameter], "Set attribute failed!"
 
 
 def plot_single_run_results(pd_data):
@@ -178,7 +208,7 @@ if __name__ == '__main__':
     # plt.legend(['final eval', 'running eval'])
     # plt.show()
 
-    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_01_05__21_19/'
+    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_01_09__23_25__semicircle/'
     NUM_ENVS = 11
     ############################################################################################
     # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
@@ -186,7 +216,7 @@ if __name__ == '__main__':
     ############################################################################################
     algorithms_dirs = ['SAC_no_reset', 'SACMER_no_end_standard']
     algorithms_names = ['SAC', 'SAC + MER']
-    buffer_sizes = [50000]#, 5000, 256]
+    buffer_sizes = [50000]  # , 5000, 256]
     for buffer in buffer_sizes:
         df_arr = []
         for i_alg, alg in enumerate(algorithms_dirs):
@@ -202,30 +232,30 @@ if __name__ == '__main__':
         plt.grid()
         plt.show()
 
-    # ############################################################################################
-    # # Comparing evolving running_eval_between all algorithms
-    # ############################################################################################
-    # algorithms_dirs = ['SAC_no_reset', 'SAC_with_reset', 'SACMER_no_end_standard', 'SACMER_end_standard']
-    # algorithms_names = ['SAC (without optimizer resets)', 'SAC (with optimizer resets between envs)', 'SAC + MER',
-    #                     'SAC + MER (final env regular SAC)']
-    # buffer_sizes = [30000, 5000, 256]
-    # env_switch_times = []  # 10000, 20000, 30000]
-    # for buffer in buffer_sizes:
-    #     df_arr = []
-    #     for i_alg, alg in enumerate(algorithms_dirs):
-    #         path = root_path + alg + f'/buffer_{buffer}/evolving'
-    #         df = merge_tbs__evolving__all_envs_together(path, is_final_eval=False)
-    #         df_arr.append(df)
-    #         sns.lineplot(data=df, x='timesteps', y='rewards')
-    #     plt.legend(algorithms_names)
-    #     plt.suptitle(f'Buffer size = {buffer}')
-    #     plt.xlabel('Steps')
-    #     plt.ylabel('Reward')
-    #     for x in env_switch_times:
-    #         plt.axvline(x=x)
-    #     plt.axhline(y=500)
-    #     plt.grid()
-    #     plt.show()
+    ############################################################################################
+    # Comparing evolving running_eval_between all algorithms
+    ############################################################################################
+    algorithms_dirs = ['SAC_no_reset', 'SAC_with_reset', 'SACMER_no_end_standard', 'SACMER_end_standard']
+    algorithms_names = ['SAC (without optimizer resets)', 'SAC (with optimizer resets between envs)', 'SAC + MER',
+                        'SAC + MER (final env regular SAC)']
+    buffer_sizes = [50000]#, 5000, 256]
+    env_switch_times = []  # 10000, 20000, 30000]
+    for buffer in buffer_sizes:
+        df_arr = []
+        for i_alg, alg in enumerate(algorithms_dirs):
+            path = root_path + alg + f'/buffer_{buffer}/evolving'
+            df = merge_tbs__evolving__all_envs_together(path, is_final_eval=False)
+            df_arr.append(df)
+            sns.lineplot(data=df, x='timesteps', y='rewards')
+        plt.legend(algorithms_names)
+        plt.suptitle(f'Buffer size = {buffer}')
+        plt.xlabel('Steps')
+        plt.ylabel('Reward')
+        for x in env_switch_times:
+            plt.axvline(x=x)
+        plt.axhline(y=60)
+        plt.grid()
+        plt.show()
 
     ############################################################################################
     # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
