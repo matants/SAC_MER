@@ -14,6 +14,7 @@ from stable_baselines3.sac.policies import SACPolicy
 from stable_baselines3 import SAC
 from copy import deepcopy
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.buffers import ReplayBuffer
 
 
 class SACExpanded(SAC):
@@ -167,3 +168,13 @@ class SACExpanded(SAC):
             eval_log_path=eval_log_path,
             reset_num_timesteps=reset_num_timesteps,
         )
+
+    def add_memories_from_another_replay_mem(self, another_replay_mem: ReplayBuffer):
+        for i in range(another_replay_mem.buffer_size):
+            self.replay_buffer.add(
+                obs=another_replay_mem.observations[i],
+                next_obs=another_replay_mem.next_observations[i],
+                action=another_replay_mem.actions[i],
+                reward=another_replay_mem.rewards[i],
+                done=another_replay_mem.dones[i]
+            )

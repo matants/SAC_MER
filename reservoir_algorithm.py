@@ -157,7 +157,7 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
         self.use_sde_at_warmup = use_sde_at_warmup
 
         self.update_env(env, support_multi_env=support_multi_env, create_eval_env=create_eval_env,
-                        monitor_wrapper=monitor_wrapper,  is_reservoir_replay=True)
+                        monitor_wrapper=monitor_wrapper, is_reservoir_replay=True)
 
     def _setup_model(self) -> None:
         self._setup_lr_schedule()
@@ -531,3 +531,14 @@ class ReservoirOffPolicyAlgorithm(BaseAlgorithm):
                 raise ValueError(
                     "Error: the model does not support multiple envs; it requires " "a single vectorized environment."
                 )
+
+    def add_memories_from_another_replay_mem(self, another_replay_mem: ReplayBuffer):
+        for i in range(another_replay_mem.buffer_size):
+            self.replay_buffer.add(
+                obs=another_replay_mem.observations[i],
+                next_obs=another_replay_mem.next_observations[i],
+                action=another_replay_mem.actions[i],
+                reward=another_replay_mem.rewards[i],
+                done=another_replay_mem.dones[i],
+                experience_index=0,  # doesn't matter
+            )

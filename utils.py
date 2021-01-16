@@ -210,15 +210,17 @@ if __name__ == '__main__':
     # plt.legend(['final eval', 'running eval'])
     # plt.show()
 
-    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_01_13__13_43/'
+    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_01_15__20_02/'
     NUM_ENVS = 11
     ############################################################################################
     # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
     # sizes? nah)
     ############################################################################################
-    algorithms_dirs = ['SAC_no_reset']#, 'SACMER_no_end_standard']
-    algorithms_names = ['SAC']#, 'SAC + MER']
-    buffer_sizes = [50000]  # , 5000, 256]
+    # algorithms_dirs = ['SAC_no_reset', 'SACMER_no_end_standard']
+    # algorithms_names = ['SAC', 'SAC + MER']
+    algorithms_dirs = ['SACMER_no_end_standard']
+    algorithms_names = ['SAC + MER']
+    buffer_sizes = [50000*80]
     for buffer in buffer_sizes:
         df_arr = []
         for i_alg, alg in enumerate(algorithms_dirs):
