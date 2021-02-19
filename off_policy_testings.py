@@ -171,10 +171,10 @@ last_round_no_mer = False
 gradient_steps = GRADIENT_STEPS + 1
 
 for buffer_size in buffer_sizes:
-    subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
-    for i in range(NUM_OF_REDOS):
-        params = [params_list[i]]
-        train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
-                  is_evolving=False, params_list=params)
-
+    for MER_GAMMA in [0.75]:
+        subsave = source_subsave + 'buffer_' + str(buffer_size) + f'__gamma_{MER_GAMMA}' + '/'
+        for i in range(NUM_OF_REDOS):
+            params = [params_list[i]]
+            train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
+                      is_evolving=False, params_list=params)
 print(f'All done! Total time = {time() - total_start_time} seconds.')

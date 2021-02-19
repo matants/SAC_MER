@@ -210,34 +210,34 @@ if __name__ == '__main__':
     # plt.legend(['final eval', 'running eval'])
     # plt.show()
 
-    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_01_15__20_02/'
+    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_01_19__22_58_gammas_compare/'
     NUM_ENVS = 11
-    ############################################################################################
-    # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
-    # sizes? nah)
-    ############################################################################################
-    # algorithms_dirs = ['SAC_no_reset', 'SACMER_no_end_standard']
-    # algorithms_names = ['SAC', 'SAC + MER']
-    algorithms_dirs = ['SACMER_no_end_standard']
-    algorithms_names = ['SAC + MER']
-    buffer_sizes = [50000*80]
-    for buffer in buffer_sizes:
-        df_arr = []
-        for i_alg, alg in enumerate(algorithms_dirs):
-            path = root_path + alg + f'/buffer_{buffer}/final_only'
-            df = merge_tbs__final_only(path)
-            df_arr.append(df)
-            df = df.sort_values(by=['timesteps'])
-            df_avg = df.rolling(100, on='timesteps')
-            sns.lineplot(data=df, x='timesteps', y='rewards')
-            # sns.lineplot(data=df_avg, x='timesteps', y='rewards')
-        plt.legend(algorithms_names)
-        plt.suptitle(f'Buffer size = {buffer}')
-        plt.xlabel('Steps')
-        plt.ylabel('Reward')
-        # plt.axhline(y=500)
-        plt.grid()
-        plt.show()
+    # ############################################################################################
+    # # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
+    # # sizes? nah)
+    # ############################################################################################
+    # # algorithms_dirs = ['SAC_no_reset', 'SACMER_no_end_standard']
+    # # algorithms_names = ['SAC', 'SAC + MER']
+    # algorithms_dirs = ['SACMER_no_end_standard']
+    # algorithms_names = ['SAC + MER']
+    # buffer_sizes = [50000*80]
+    # for buffer in buffer_sizes:
+    #     df_arr = []
+    #     for i_alg, alg in enumerate(algorithms_dirs):
+    #         path = root_path + alg + f'/buffer_{buffer}/final_only'
+    #         df = merge_tbs__final_only(path)
+    #         df_arr.append(df)
+    #         df = df.sort_values(by=['timesteps'])
+    #         df_avg = df.rolling(100, on='timesteps')
+    #         sns.lineplot(data=df, x='timesteps', y='rewards')
+    #         # sns.lineplot(data=df_avg, x='timesteps', y='rewards')
+    #     plt.legend(algorithms_names)
+    #     plt.suptitle(f'Buffer size = {buffer}')
+    #     plt.xlabel('Steps')
+    #     plt.ylabel('Reward')
+    #     # plt.axhline(y=500)
+    #     plt.grid()
+    #     plt.show()
 
     # ############################################################################################
     # # Comparing evolving running_eval_between all algorithms
@@ -315,3 +315,29 @@ if __name__ == '__main__':
     #     plt.axhline(y=500)
     #     plt.grid()
     #     plt.show()
+
+    ############################################################################################
+    # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
+    # sizes? nah)
+    ############################################################################################
+    # algorithms_dirs = ['SAC_no_reset', 'SACMER_no_end_standard']
+    # algorithms_names = ['SAC', 'SAC + MER']
+    alg = 'SACMER_no_end_standard'
+    algorithms_names = ['SAC + MER']
+    gammas = [0.25, 0.5, 0.75, 1]
+    df_arr = []
+    for i_gamma, gamma in enumerate(gammas):
+        path = root_path + alg + f'/buffer_4000000__gamma_{gamma}/final_only'
+        df = merge_tbs__final_only(path)
+        df_arr.append(df)
+        df = df.sort_values(by=['timesteps'])
+        df_avg = df.rolling(100, on='timesteps')
+        sns.lineplot(data=df, x='timesteps', y='rewards')
+        # sns.lineplot(data=df_avg, x='timesteps', y='rewards')
+    plt.legend(gammas)
+    plt.suptitle(f'SACMER on pretrained data')
+    plt.xlabel('Steps')
+    plt.ylabel('Reward')
+    plt.axhline(y=54)
+    plt.grid()
+    plt.show()
