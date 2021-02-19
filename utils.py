@@ -12,6 +12,9 @@ import os
 Param = namedtuple('Param', ['mean', 'half_range'])
 
 
+
+
+
 class AlternatingParamsUniform:
     def __init__(self, params_dict):
         self.params_dict = params_dict
@@ -76,6 +79,39 @@ class AlternatingParamsSemiCircleBot:
 
     def sample1_means(self):
         return self.params_dict
+
+
+class SequentialParams:
+    def __init__(self, params_dict):
+        self.params_dict = params_dict
+        self.index = 0
+        lens = []
+        for key in params_dict:
+            lens.append(len(params_dict[key]))
+        if lens.count(lens[0])!=len(lens):
+            raise ValueError("Lengths don't match.")
+        self.len = lens[0]
+
+    def sample1(self):
+        ret_dict = {}
+        for key in self.params_dict:
+            ret_dict[key] = self.params_dict[key][self.index]
+        self.index += 1
+        return ret_dict
+
+    def sample(self, n):
+        return [self.sample1() for _ in range(n)]
+
+    def sample1_means(self):
+        ret_dict = {}
+        for key in self.params_dict:
+            ret_dict[key] = self.params_dict[key][-1]
+        return ret_dict
+
+
+
+
+
 
 
 def change_env_parameters(env: GymEnv, eval_env: Optional[GymEnv] = None, parameter_dict: Dict = {}):

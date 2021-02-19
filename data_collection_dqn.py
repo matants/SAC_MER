@@ -6,8 +6,8 @@ from datetime import datetime
 import subprocess
 from time import time
 
-from stable_baselines3 import SAC
-from sac_reservoir import ReservoirSAC
+from stable_baselines3 import DQN
+from dqn_reservoir import ReservoirSAC
 from sac_mer import SACMER
 from sac_expanded import SACExpanded
 from sac_mer_variations import SACMER_Q, SACMER_P, SACMER_T
@@ -32,7 +32,7 @@ GRADIENT_STEPS = 5
 META_TRAINING_TIMESTEPS = 2000
 FINAL_TRAINING_TIMESTEPS = 10000
 
-env_name = 'gym_continuouscartpole:ContinuousCartPole-v1'
+env_name = 'CartPole-v1'
 buffer_sizes = [30000, 5000, 256]
 
 now = datetime.now().strftime("%Y_%m_%d__%H_%M")
