@@ -7,12 +7,11 @@ import subprocess
 from time import time
 
 from stable_baselines3 import DQN
-from dqn_reservoir import ReservoirSAC
+from dqn_reservoir import ReservoirDQN
 from sac_mer import SACMER
 from sac_expanded import SACExpanded
 from sac_mer_variations import SACMER_Q, SACMER_P, SACMER_T
 from stable_baselines3.sac import MlpPolicy
-import gym_continuouscartpole  # not necessary to import but this checks if it is installed
 from utils import change_env_parameters, Param, AlternatingParamsUniform, SequentialParams
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList, EventCallback
 import pickle

@@ -1,14 +1,13 @@
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
-import gym
 import numpy as np
 import torch as th
 from torch.nn import functional as F
 
 from stable_baselines3.common import logger
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
-from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
-from stable_baselines3.common.utils import get_linear_fn, is_vectorized_observation, polyak_update
+from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback
+from stable_baselines3.common.utils import get_linear_fn, polyak_update
 from stable_baselines3.dqn.policies import DQNPolicy
 
 from reservoir_algorithm import ReservoirOffPolicyAlgorithm
@@ -17,17 +16,18 @@ from random import randint
 from stable_baselines3.common.utils import update_learning_rate
 from copy import deepcopy
 
-
 class DQNMER(ReservoirDQN):
     """
     Deep Q-Network (DQN)
+
     Paper: https://arxiv.org/abs/1312.5602, https://www.nature.com/articles/nature14236
     Default hyperparameters are taken from the nature paper,
     except for the optimizer and learning rate that were taken from Stable Baselines defaults.
+
     :param policy: The policy model to use (MlpPolicy, CnnPolicy, ...)
     :param env: The environment to learn from (if registered in Gym, can be str)
     :param learning_rate: The learning rate, it can be a function
-        of the current progress remaining (from 1 to 0)
+        of the current progress (from 1 to 0)
     :param buffer_size: size of the replay buffer
     :param learning_starts: how many steps of the model to collect transitions for before learning starts
     :param batch_size: Minibatch size for each gradient update
@@ -64,7 +64,7 @@ class DQNMER(ReservoirDQN):
             self,
             policy: Union[str, Type[DQNPolicy]],
             env: Union[GymEnv, str],
-            learning_rate: Union[float, Schedule] = 1e-4,
+            learning_rate: Union[float, Callable] = 1e-4,
             buffer_size: int = 1000000,
             learning_starts: int = 50000,
             batch_size: Optional[int] = 32,
@@ -116,28 +116,17 @@ class DQNMER(ReservoirDQN):
             device,
             _init_setup_model,
         )
-
         self.mer_gamma = mer_gamma
         self.mer_s = mer_s
 
         # if self.policy_kwargs['optimizer_class'] is not th.optim.SGD:
         #     raise ValueError("Optimizer Must be SGD!")
 
-    def _setup_model(self) -> None:
-        super()._setup_model()
-        self._create_aliases()
-        self.exploration_schedule = get_linear_fn(
-            self.exploration_initial_eps, self.exploration_final_eps, self.exploration_fraction
-        )
-
-    def _create_aliases(self) -> None:
-        self.q_net = self.policy.q_net
-        self.q_net_target = self.policy.q_net_target
 
     def _on_step(self) -> None:
         """
         Update the exploration rate and target network if needed.
-        This method is called in ``collect_rollouts()`` after each step in the environment.
+        This method is called in ``collect_rollout()`` after each step in the environment.
         """
         if self.num_timesteps % self.target_update_interval == 0:
             polyak_update(self.q_net.parameters(), self.q_net_target.parameters(), self.tau)
@@ -155,23 +144,23 @@ class DQNMER(ReservoirDQN):
             replay_data = self.replay_buffer.sample(batch_size, env=self._vec_normalize_env)
 
             with th.no_grad():
-                # Compute the next Q-values using the target network
-                next_q_values = self.q_net_target(replay_data.next_observations)
+                # Compute the target Q values
+                target_q = self.q_net_target(replay_data.next_observations)
                 # Follow greedy policy: use the one with the highest value
-                next_q_values, _ = next_q_values.max(dim=1)
+                target_q, _ = target_q.max(dim=1)
                 # Avoid potential broadcast issue
-                next_q_values = next_q_values.reshape(-1, 1)
+                target_q = target_q.reshape(-1, 1)
                 # 1-step TD target
-                target_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * next_q_values
+                target_q = replay_data.rewards + (1 - replay_data.dones) * self.gamma * target_q
 
-            # Get current Q-values estimates
-            current_q_values = self.q_net(replay_data.observations)
+            # Get current Q estimates
+            current_q = self.q_net(replay_data.observations)
 
             # Retrieve the q-values for the actions from the replay buffer
-            current_q_values = th.gather(current_q_values, dim=1, index=replay_data.actions.long())
+            current_q = th.gather(current_q, dim=1, index=replay_data.actions.long())
 
             # Compute Huber loss (less sensitive to outliers)
-            loss = F.smooth_l1_loss(current_q_values, target_q_values)
+            loss = F.smooth_l1_loss(current_q, target_q)
             losses.append(loss.item())
 
             # Optimize the policy
@@ -187,32 +176,6 @@ class DQNMER(ReservoirDQN):
         logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
         logger.record("train/loss", np.mean(losses))
 
-    def predict(
-            self,
-            observation: np.ndarray,
-            state: Optional[np.ndarray] = None,
-            mask: Optional[np.ndarray] = None,
-            deterministic: bool = False,
-    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-        """
-        Overrides the base_class predict function to include epsilon-greedy exploration.
-        :param observation: the input observation
-        :param state: The last states (can be None, used in recurrent policies)
-        :param mask: The last masks (can be None, used in recurrent policies)
-        :param deterministic: Whether or not to return deterministic actions.
-        :return: the model's action and the next state
-            (used in recurrent policies)
-        """
-        if not deterministic and np.random.rand() < self.exploration_rate:
-            if is_vectorized_observation(observation, self.observation_space):
-                n_batch = observation.shape[0]
-                action = np.array([self.action_space.sample() for _ in range(n_batch)])
-            else:
-                action = np.array(self.action_space.sample())
-        else:
-            action, state = self.policy.predict(observation, state, mask, deterministic)
-        return action, state
-
     def learn(
             self,
             total_timesteps: int,
@@ -224,7 +187,7 @@ class DQNMER(ReservoirDQN):
             tb_log_name: str = "DQN",
             eval_log_path: Optional[str] = None,
             reset_num_timesteps: bool = True,
-    ) -> OffPolicyAlgorithm:
+    ) -> ReservoirOffPolicyAlgorithm:
 
         return super().learn(
             total_timesteps=total_timesteps,
@@ -237,11 +200,3 @@ class DQNMER(ReservoirDQN):
             eval_log_path=eval_log_path,
             reset_num_timesteps=reset_num_timesteps,
         )
-
-    def _excluded_save_params(self) -> List[str]:
-        return super()._excluded_save_params() + ["q_net", "q_net_target"]
-
-    def _get_torch_save_params(self) -> Tuple[List[str], List[str]]:
-        state_dicts = ["policy", "policy.optimizer"]
-
-        return state_dicts, []
