@@ -87,6 +87,7 @@ class DQNMER(ReservoirDQN):
             seed: Optional[int] = None,
             device: Union[th.device, str] = "auto",
             _init_setup_model: bool = True,
+            monitor_wrapper: bool = True,
             mer_gamma: float = 0.3,
             mer_s: int = 5,
             reset_optimizers_during_training: bool = True,
@@ -116,6 +117,7 @@ class DQNMER(ReservoirDQN):
             seed,
             device,
             _init_setup_model,
+            monitor_wrapper,
         )
         self.mer_gamma = mer_gamma
         self.mer_s = mer_s

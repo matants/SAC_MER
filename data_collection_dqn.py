@@ -11,15 +11,15 @@ from dqn_reservoir import ReservoirDQN
 from dqn_mer import DQNMER
 from algs_expanded import DQNExpanded
 from stable_baselines3.dqn import MlpPolicy
-from utils import change_env_parameters, Param, AlternatingParamsUniform, SequentialParams
+from utils import change_env_parameters, Param, AlternatingParamsUniform, SequentialParams, seed
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList, EventCallback
 import pickle
 import os
 
-random.seed(73)
-NUM_OF_REDOS = 5  # how many times we run the training loops (for confidence bounds)
+seed(73)
+NUM_OF_REDOS = 10  # how many times we run the training loops (for confidence bounds)
 EVAL_FREQ = 100
-N_EVAL_EPISODES = 2
+N_EVAL_EPISODES = 5
 NUM_TRAINING_ENVS = 4
 MER_S = 2
 MER_GAMMA = 0.3
@@ -27,11 +27,11 @@ BATCH_SIZE = 128
 LEARNING_RATE = 3e-4
 LEARNING_STARTS = 256
 GRADIENT_STEPS = 5
-META_TRAINING_TIMESTEPS = 2000
+META_TRAINING_TIMESTEPS = 10000
 FINAL_TRAINING_TIMESTEPS = 10000
 
 env_name = 'CartPole-v1'
-buffer_sizes = [30000, 5000, 256]
+buffer_sizes = [50000]
 
 now = datetime.now().strftime("%Y_%m_%d__%H_%M")
 save_path = './experiments__' + now + '/'
@@ -70,7 +70,7 @@ def train_alg(model_alg, reset_optimizers, buffer_size, subsave, iteration, last
         'optimizer_class': th.optim.Adam,
         'optimizer_kwargs': optimizer_kwargs,
     }
-    model = model_alg(MlpPolicy, env, verbose=0, buffer_size=buffer_size, batch_size=BATCH_SIZE,
+    model = model_alg(MlpPolicy, env, verbose=2, buffer_size=buffer_size, batch_size=BATCH_SIZE,
                       learning_rate=LEARNING_RATE,
                       learning_starts=LEARNING_STARTS,
                       gradient_steps=GRADIENT_STEPS, policy_kwargs=policy_kwargs, mer_s=MER_S, mer_gamma=MER_GAMMA,
@@ -83,10 +83,10 @@ def train_alg(model_alg, reset_optimizers, buffer_size, subsave, iteration, last
             training_timesteps = FINAL_TRAINING_TIMESTEPS
             log_name += '_final'
         change_env_parameters(env, eval_env, parameter_dict=param)
-        if model_alg.__name__ == 'SACMER' and last_round_no_mer and (i_param == (len(params) - 1)):
+        if model_alg.__name__ == 'DQNMER' and last_round_no_mer and (i_param == (len(params) - 1)):
             is_reservoir = False
             is_mer = False
-        else:  # This will not have any effect on regular SAC
+        else:  # This will not have any effect on regular DQN
             is_reservoir = True
             is_mer = True
         model.update_env(env, monitor_wrapper=False, is_reservoir=is_reservoir,
@@ -117,10 +117,10 @@ def train_alg(model_alg, reset_optimizers, buffer_size, subsave, iteration, last
 
 total_start_time = time()
 ################################################################
-# SACMER - no changes
+# DQNMER - no changes
 ################################################################
-source_subsave = save_path + 'SACMER_no_end_standard/'
-model_alg = SACMER
+source_subsave = save_path + 'DQNMER_no_end_standard/'
+model_alg = DQNMER
 reset_optimizers = False
 last_round_no_mer = False
 for buffer_size in buffer_sizes:
@@ -132,10 +132,10 @@ for buffer_size in buffer_sizes:
                   is_evolving=False)
 
 ################################################################
-# SACMER - final training round is standard
+# DQNMER - final training round is standard
 ################################################################
-source_subsave = save_path + 'SACMER_end_standard/'
-model_alg = SACMER
+source_subsave = save_path + 'DQNMER_end_standard/'
+model_alg = DQNMER
 reset_optimizers = False
 last_round_no_mer = True
 for buffer_size in buffer_sizes:
@@ -144,99 +144,38 @@ for buffer_size in buffer_sizes:
         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
                   is_evolving=True)
         # train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
-        #           is_evolving=False)  # Not necessary, this is covered in SAC alone
-#
-# ################################################################
-# # SAC - no optimizer reset between environment updates
-# ################################################################
-# source_subsave = save_path + 'SAC_no_reset/'
-# model_alg = SACExpanded
-# reset_optimizers = False
-# last_round_no_mer = False
-# for buffer_size in buffer_sizes:
-#     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
-#     for i in range(NUM_OF_REDOS):
-#         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
-#                   is_evolving=True)
-#         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
-#                   is_evolving=False)
-#
-# ################################################################
-# # SAC - with optimizer reset between environment updates
-# ################################################################
-# source_subsave = save_path + 'SAC_with_reset/'
-# model_alg = SACExpanded
-# reset_optimizers = True
-# last_round_no_mer = False
-# for buffer_size in buffer_sizes:
-#     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
-#     for i in range(NUM_OF_REDOS):
-#         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
-#                   is_evolving=True)
-#         # train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
-#         #           is_evolving=False)  # not necessary, this was already tested since there are no optimizer resets
-#         #           if only training on final env
-#
-#
-# ################################################################
-# # SACMER_P - no changes
-# ################################################################
-# source_subsave = save_path + 'SACMER_P_no_end_standard/'
-# model_alg = SACMER_P
-# reset_optimizers = False
-# last_round_no_mer = False
-# for buffer_size in buffer_sizes:
-#     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
-#     for i in range(NUM_OF_REDOS):
-#         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
-#                   is_evolving=True)
-#         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
-#                   is_evolving=False)
-#
-# ################################################################
-# # SACMER_P - final training round is standard
-# ################################################################
-# source_subsave = save_path + 'SACMER_P_end_standard/'
-# model_alg = SACMER_P
-# reset_optimizers = False
-# last_round_no_mer = True
-# for buffer_size in buffer_sizes:
-#     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
-#     for i in range(NUM_OF_REDOS):
-#         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
-#                   is_evolving=True)
-#         # train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
-#         #           is_evolving=False)  # Not necessary, this is covered in SAC alone
-#
-# ################################################################
-# # SACMER_T - no changes
-# ################################################################
-# source_subsave = save_path + 'SACMER_T_no_end_standard/'
-# model_alg = SACMER_T
-# reset_optimizers = False
-# last_round_no_mer = False
-# for buffer_size in buffer_sizes:
-#     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
-#     for i in range(NUM_OF_REDOS):
-#         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
-#                   is_evolving=True)
-#         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
-#                   is_evolving=False)
-#
-# ################################################################
-# # SACMER_T - final training round is standard
-# ################################################################
-# source_subsave = save_path + 'SACMER_T_end_standard/'
-# model_alg = SACMER_T
-# reset_optimizers = False
-# last_round_no_mer = True
-# for buffer_size in buffer_sizes:
-#     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
-#     for i in range(NUM_OF_REDOS):
-#         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
-#                   is_evolving=True)
-#         # train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
-#         #           is_evolving=False)  # Not necessary, this is covered in SAC alone
+        #           is_evolving=False)  # Not necessary, this is covered in DQN alone
+
+################################################################
+# DQN - no optimizer reset between environment updates
+################################################################
+source_subsave = save_path + 'DQN_no_reset/'
+model_alg = DQNExpanded
+reset_optimizers = False
+last_round_no_mer = False
+for buffer_size in buffer_sizes:
+    subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
+    for i in range(NUM_OF_REDOS):
+        train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
+                  is_evolving=True)
+        train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
+                  is_evolving=False)
+
+################################################################
+# DQN - with optimizer reset between environment updates
+################################################################
+source_subsave = save_path + 'DQN_with_reset/'
+model_alg = DQNExpanded
+reset_optimizers = True
+last_round_no_mer = False
+for buffer_size in buffer_sizes:
+    subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
+    for i in range(NUM_OF_REDOS):
+        train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
+                  is_evolving=True)
+        # train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
+        #           is_evolving=False)  # not necessary, this was already tested since there are no optimizer resets
+        #           if only training on final env
 
 
 print(f'All done! Total time = {time() - total_start_time} seconds.')

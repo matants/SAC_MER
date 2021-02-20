@@ -83,6 +83,7 @@ class ReservoirDQN(ReservoirOffPolicyAlgorithm):
             seed: Optional[int] = None,
             device: Union[th.device, str] = "auto",
             _init_setup_model: bool = True,
+            monitor_wrapper: bool = True,
     ):
 
         super().__init__(
@@ -107,6 +108,7 @@ class ReservoirDQN(ReservoirOffPolicyAlgorithm):
             seed=seed,
             sde_support=False,
             optimize_memory_usage=optimize_memory_usage,
+            monitor_wrapper=monitor_wrapper,
         )
 
         self.exploration_initial_eps = exploration_initial_eps
