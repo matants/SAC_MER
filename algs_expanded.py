@@ -10,6 +10,7 @@ from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback
 from stable_baselines3.common.utils import polyak_update
 from stable_baselines3.sac.policies import SACPolicy
+from stable_baselines3.dqn.policies import DQNPolicy
 
 from stable_baselines3 import SAC, DQN
 from copy import deepcopy
@@ -157,6 +158,147 @@ class SACExpanded(SAC):
         :param kwargs: Does nothing just so method doesn't break.
         :return:
         """
+        return super().learn(
+            total_timesteps=total_timesteps,
+            callback=callback,
+            log_interval=log_interval,
+            eval_env=eval_env,
+            eval_freq=eval_freq,
+            n_eval_episodes=n_eval_episodes,
+            tb_log_name=tb_log_name,
+            eval_log_path=eval_log_path,
+            reset_num_timesteps=reset_num_timesteps,
+        )
+
+    def add_memories_from_another_replay_mem(self, another_replay_mem: ReplayBuffer):
+        for i in range(another_replay_mem.buffer_size):
+            self.replay_buffer.add(
+                obs=another_replay_mem.observations[i],
+                next_obs=another_replay_mem.next_observations[i],
+                action=another_replay_mem.actions[i],
+                reward=another_replay_mem.rewards[i],
+                done=another_replay_mem.dones[i]
+            )
+
+
+class DQNExpanded(DQN):
+    # adding kwargs to __init__ to handle kwargs not used by DQN
+    def __init__(
+            self,
+            policy: Union[str, Type[DQNPolicy]],
+            env: Union[GymEnv, str],
+            learning_rate: Union[float, Callable] = 1e-4,
+            buffer_size: int = 1000000,
+            learning_starts: int = 50000,
+            batch_size: Optional[int] = 32,
+            tau: float = 1.0,
+            gamma: float = 0.99,
+            train_freq: int = 4,
+            gradient_steps: int = 1,
+            n_episodes_rollout: int = -1,
+            optimize_memory_usage: bool = False,
+            target_update_interval: int = 10000,
+            exploration_fraction: float = 0.1,
+            exploration_initial_eps: float = 1.0,
+            exploration_final_eps: float = 0.05,
+            max_grad_norm: float = 10,
+            tensorboard_log: Optional[str] = None,
+            create_eval_env: bool = False,
+            policy_kwargs: Optional[Dict[str, Any]] = None,
+            verbose: int = 0,
+            seed: Optional[int] = None,
+            device: Union[th.device, str] = "auto",
+            _init_setup_model: bool = True,
+            monitor_wrapper: bool = True,
+            **kwargs
+    ):
+        super().__init__(
+            policy,
+            env,
+            learning_rate,
+            buffer_size,
+            learning_starts,
+            batch_size,
+            tau,
+            gamma,
+            train_freq,
+            gradient_steps,
+            n_episodes_rollout,
+            optimize_memory_usage,
+            target_update_interval,
+            exploration_fraction,
+            exploration_initial_eps,
+            exploration_final_eps,
+            max_grad_norm,
+            tensorboard_log,
+            create_eval_env,
+            policy_kwargs,
+            verbose,
+            seed,
+            device,
+            _init_setup_model,
+        )
+        self.update_env(env, support_multi_env=False, create_eval_env=create_eval_env, monitor_wrapper=monitor_wrapper,
+                        reset_optimizers=False)
+
+    def update_env(self, env, support_multi_env: bool = False,
+                   eval_env: Optional[GymEnv] = None, monitor_wrapper: bool = True, reset_optimizers: bool = False,
+                   **kwargs):
+        """
+        Replace current env with new env.
+        :param env: Gym environment (activated, not a string).
+        :param support_multi_env: Whether the algorithm supports training
+        with multiple environments (as in A2C)
+        :param eval_env: Environment to use for evaluation (optional).
+        :param monitor_wrapper: When creating an environment, whether to wrap it
+        or not in a Monitor wrapper.
+        :param reset_optimizers: Whether to reset optimizers (momentums, etc.).
+        :param kwargs: Does nothing, just so more arguments can pass without method failing
+        :return:
+        """
+        if reset_optimizers:
+            optimizers = []
+            if self.policy is not None:
+                optimizers.append(self.policy.optimizer)
+
+            # Reset optimizers:
+            for i_optimizer, optimizer in enumerate(optimizers):
+                optimizer.__init__(optimizer.param_groups[0]['params'])
+                optimizers[i_optimizer] = optimizer
+
+        if env is not None:
+            if eval_env is not None:
+                self.eval_env = eval_env
+                if monitor_wrapper:
+                    self.eval_env = Monitor(self.eval_env, filename=None)
+
+            if monitor_wrapper:
+                env = Monitor(env, filename=None)
+            env = self._wrap_env(env, self.verbose)
+
+            self.observation_space = env.observation_space
+            self.action_space = env.action_space
+            self.n_envs = env.num_envs
+            self.env = env
+
+            if not support_multi_env and self.n_envs > 1:
+                raise ValueError(
+                    "Error: the model does not support multiple envs; it requires " "a single vectorized environment."
+                )
+
+    def learn(
+            self,
+            total_timesteps: int,
+            callback: MaybeCallback = None,
+            log_interval: int = 4,
+            eval_env: Optional[GymEnv] = None,
+            eval_freq: int = -1,
+            n_eval_episodes: int = 5,
+            tb_log_name: str = "DQN",
+            eval_log_path: Optional[str] = None,
+            reset_num_timesteps: bool = True,
+            **kwargs
+    ) -> OffPolicyAlgorithm:
         return super().learn(
             total_timesteps=total_timesteps,
             callback=callback,
