@@ -150,7 +150,7 @@ total_start_time = time()
 # ###############################################################
 # source_subsave = save_path + 'SAC_no_reset/'
 # model_alg = SACExpanded
-# reset_optimizers = False
+# reset_optimizers_between_envs = False
 # last_round_no_mer = False
 # gradient_steps = GRADIENT_STEPS
 #
@@ -158,7 +158,7 @@ total_start_time = time()
 #     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
 #     for i in range(NUM_OF_REDOS):
 #         params = [params_list[i]]
-#         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
+#         train_alg(model_alg, reset_optimizers_between_envs, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
 #                   is_evolving=False, params_list=params)
 
 ################################################################

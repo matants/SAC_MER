@@ -142,7 +142,7 @@ for buffer_size in buffer_sizes:
     for i in range(NUM_OF_REDOS):
         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
                   is_evolving=True)
-        # train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
+        # train_alg(model_alg, reset_optimizers_between_envs, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
         #           is_evolving=False)  # Not necessary, this is covered in SAC alone
 
 ################################################################
@@ -172,7 +172,7 @@ for buffer_size in buffer_sizes:
     for i in range(NUM_OF_REDOS):
         train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'evolving/', i, last_round_no_mer,
                   is_evolving=True)
-        # train_alg(model_alg, reset_optimizers, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
+        # train_alg(model_alg, reset_optimizers_between_envs, buffer_size, subsave + 'final_only/', i, last_round_no_mer,
         #           is_evolving=False)  # not necessary, this was already tested since there are no optimizer resets
         #           if only training on final env
 
