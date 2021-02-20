@@ -109,6 +109,7 @@ class SACMER(ReservoirSAC):
         monitor_wrapper: bool = True,
         mer_gamma: float = 0.3,
         mer_s: int = 5,
+        reset_optimizers_during_training: bool = True,
     ):
         super(SACMER, self).__init__(
             policy,
@@ -142,6 +143,7 @@ class SACMER(ReservoirSAC):
 
         self.mer_gamma = mer_gamma
         self.mer_s = mer_s
+        self.reset_optimizers_during_training=reset_optimizers_during_training
 
         # if self.policy_kwargs['optimizer_class'] is not th.optim.SGD:
         #     raise ValueError("Optimizer Must be SGD!")
@@ -204,9 +206,10 @@ class SACMER(ReservoirSAC):
             optimizers += [self.ent_coef_optimizer]
 
         # Reset optimizers:
-        for i_optimizer, optimizer in enumerate(optimizers):
-            optimizer.__init__(optimizer.param_groups[0]['params'])
-            optimizers[i_optimizer] = optimizer
+        if self.reset_optimizers_during_training:
+            for i_optimizer, optimizer in enumerate(optimizers):
+                optimizer.__init__(optimizer.param_groups[0]['params'])
+                optimizers[i_optimizer] = optimizer
 
         # Update optimizers learning rate
         base_lr = self.lr_schedule(self._current_progress_remaining)

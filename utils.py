@@ -6,13 +6,17 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from random import random
+import random
 import os
+import torch
 
 Param = namedtuple('Param', ['mean', 'half_range'])
 
 
-
+def seed(seed):
+    random.seed(seed)
+    torch.random.manual_seed(seed)
+    np.random.seed(seed)
 
 
 class AlternatingParamsUniform:
@@ -23,7 +27,7 @@ class AlternatingParamsUniform:
         ret_dict = {}
         for key in self.params_dict:
             param = self.params_dict[key]
-            param_val = (random() - 0.5) * 2 * param.half_range + param.mean
+            param_val = (random.random() - 0.5) * 2 * param.half_range + param.mean
             ret_dict[key] = param_val
         return ret_dict
 
@@ -88,7 +92,7 @@ class SequentialParams:
         lens = []
         for key in params_dict:
             lens.append(len(params_dict[key]))
-        if lens.count(lens[0])!=len(lens):
+        if lens.count(lens[0]) != len(lens):
             raise ValueError("Lengths don't match.")
         self.len = lens[0]
 
@@ -107,11 +111,6 @@ class SequentialParams:
         for key in self.params_dict:
             ret_dict[key] = self.params_dict[key][-1]
         return ret_dict
-
-
-
-
-
 
 
 def change_env_parameters(env: GymEnv, eval_env: Optional[GymEnv] = None, parameter_dict: Dict = {}):

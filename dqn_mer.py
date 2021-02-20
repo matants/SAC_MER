@@ -16,6 +16,7 @@ from random import randint
 from stable_baselines3.common.utils import update_learning_rate
 from copy import deepcopy
 
+
 class DQNMER(ReservoirDQN):
     """
     Deep Q-Network (DQN)
@@ -88,8 +89,8 @@ class DQNMER(ReservoirDQN):
             _init_setup_model: bool = True,
             mer_gamma: float = 0.3,
             mer_s: int = 5,
+            reset_optimizers_during_training: bool = True,
     ):
-
         super().__init__(
             policy,
             env,
@@ -118,23 +119,132 @@ class DQNMER(ReservoirDQN):
         )
         self.mer_gamma = mer_gamma
         self.mer_s = mer_s
+        self.reset_optimizers_during_training = reset_optimizers_during_training
 
         # if self.policy_kwargs['optimizer_class'] is not th.optim.SGD:
         #     raise ValueError("Optimizer Must be SGD!")
 
+    def learn(
+            self,
+            total_timesteps: int,
+            callback: MaybeCallback = None,
+            log_interval: int = 4,
+            eval_env: Optional[GymEnv] = None,
+            eval_freq: int = -1,
+            n_eval_episodes: int = 5,
+            tb_log_name: str = "SAC",
+            eval_log_path: Optional[str] = None,
+            reset_num_timesteps: bool = True,
+            is_mer: bool = True,
+    ) -> ReservoirOffPolicyAlgorithm:
+        total_timesteps, callback = self._setup_learn(
+            total_timesteps, eval_env, callback, eval_freq, n_eval_episodes, eval_log_path, reset_num_timesteps,
+            tb_log_name
+        )
 
-    def _on_step(self) -> None:
-        """
-        Update the exploration rate and target network if needed.
-        This method is called in ``collect_rollout()`` after each step in the environment.
-        """
-        if self.num_timesteps % self.target_update_interval == 0:
-            polyak_update(self.q_net.parameters(), self.q_net_target.parameters(), self.tau)
+        callback.on_training_start(locals(), globals())
 
-        self.exploration_rate = self.exploration_schedule(self._current_progress_remaining)
-        logger.record("rollout/exploration rate", self.exploration_rate)
+        while self.num_timesteps < total_timesteps:
 
-    def train(self, gradient_steps: int, batch_size: int = 100) -> None:
+            rollout = self.collect_rollouts(
+                self.env,
+                n_episodes=self.n_episodes_rollout,
+                n_steps=self.train_freq,
+                action_noise=self.action_noise,
+                callback=callback,
+                learning_starts=self.learning_starts,
+                replay_buffer=self.replay_buffer,
+                log_interval=log_interval,
+            )
+
+            if rollout.continue_training is False:
+                break
+
+            if self.num_timesteps > 0 and self.num_timesteps > self.learning_starts:
+                # If no `gradient_steps` is specified,
+                # do as many gradients steps as steps performed during the rollout
+                gradient_steps = self.gradient_steps if self.gradient_steps > 0 else rollout.episode_timesteps
+                self.train(batch_size=self.batch_size, gradient_steps=gradient_steps, is_mer=is_mer)
+
+        callback.on_training_end()
+
+        return self
+
+    def train(self, gradient_steps: int, batch_size: int = 64, is_mer=True) -> None:
+        if is_mer:
+            self.train_mer(gradient_steps, batch_size)
+        else:
+            self.train_standard(gradient_steps, batch_size)
+
+    def train_mer(self, gradient_steps: int, batch_size: int = 64) -> None:
+        optimizers = [self.policy.optimizer]
+
+        # Reset optimizers:
+        if self.reset_optimizers_during_training:
+            for i_optimizer, optimizer in enumerate(optimizers):
+                optimizer.__init__(optimizer.param_groups[0]['params'])
+                optimizers[i_optimizer] = optimizer
+
+        # Update learning rate according to schedule
+        base_lr = self.lr_schedule(self._current_progress_remaining)
+
+        # Save initial weights of model
+        models_to_update = [self.policy]
+        initial_state_dicts = [deepcopy(model.state_dict()) for model in models_to_update]
+
+
+        losses = []
+        current_example_ind = randint(0, gradient_steps - 1)
+        for gradient_step in range(gradient_steps):
+            # Sample replay buffer or current example, and update learning rate accordingly
+            if gradient_step == current_example_ind:
+                replay_data = self.current_experience_buffer.sample(1, env=self._vec_normalize_env)
+                for optimizer in optimizers:
+                    update_learning_rate(optimizer, base_lr * self.mer_s)
+            else:
+                replay_data = self.replay_buffer.sample(batch_size, env=self._vec_normalize_env)
+                for optimizer in optimizers:
+                    update_learning_rate(optimizer, base_lr)
+
+
+            with th.no_grad():
+                # Compute the target Q values
+                target_q = self.q_net_target(replay_data.next_observations)
+                # Follow greedy policy: use the one with the highest value
+                target_q, _ = target_q.max(dim=1)
+                # Avoid potential broadcast issue
+                target_q = target_q.reshape(-1, 1)
+                # 1-step TD target
+                target_q = replay_data.rewards + (1 - replay_data.dones) * self.gamma * target_q
+
+            # Get current Q estimates
+            current_q = self.q_net(replay_data.observations)
+
+            # Retrieve the q-values for the actions from the replay buffer
+            current_q = th.gather(current_q, dim=1, index=replay_data.actions.long())
+
+            # Compute Huber loss (less sensitive to outliers)
+            loss = F.smooth_l1_loss(current_q, target_q)
+            losses.append(loss.item())
+
+            # Optimize the policy
+            self.policy.optimizer.zero_grad()
+            loss.backward()
+            # Clip gradient norm
+            th.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
+            self.policy.optimizer.step()
+
+        # Perform Reptile step
+        for i_model, model in enumerate(models_to_update):
+            self.reptile_step_state_dict(model, initial_state_dicts[i_model])
+
+        # Increase update counter
+        self._n_updates += gradient_steps
+
+        logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
+        logger.record("train/loss", np.mean(losses))
+
+    def train_standard(self, gradient_steps: int, batch_size: int = 64) -> None:
         # Update learning rate according to schedule
         self._update_learning_rate(self.policy.optimizer)
 
@@ -176,27 +286,10 @@ class DQNMER(ReservoirDQN):
         logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
         logger.record("train/loss", np.mean(losses))
 
-    def learn(
-            self,
-            total_timesteps: int,
-            callback: MaybeCallback = None,
-            log_interval: int = 4,
-            eval_env: Optional[GymEnv] = None,
-            eval_freq: int = -1,
-            n_eval_episodes: int = 5,
-            tb_log_name: str = "DQN",
-            eval_log_path: Optional[str] = None,
-            reset_num_timesteps: bool = True,
-    ) -> ReservoirOffPolicyAlgorithm:
+    def reptile_step_state_dict(self, model, weights_before):
+        weights_after = model.state_dict()
+        model.load_state_dict({name:
+                                   weights_before[name] + (weights_after[name] - weights_before[name]) * self.mer_gamma
+                               for name in weights_before})
 
-        return super().learn(
-            total_timesteps=total_timesteps,
-            callback=callback,
-            log_interval=log_interval,
-            eval_env=eval_env,
-            eval_freq=eval_freq,
-            n_eval_episodes=n_eval_episodes,
-            tb_log_name=tb_log_name,
-            eval_log_path=eval_log_path,
-            reset_num_timesteps=reset_num_timesteps,
-        )
+

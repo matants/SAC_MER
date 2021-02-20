@@ -8,7 +8,7 @@ from time import time
 from stable_baselines3 import SAC
 from sac_reservoir import ReservoirSAC
 from sac_mer import SACMER
-from sac_expanded import SACExpanded
+from algs_expanded import SACExpanded
 from stable_baselines3.sac import MlpPolicy
 import gym_continuouscartpole  # not necessary to import but this checks if it is installed
 from utils import change_env_parameters
