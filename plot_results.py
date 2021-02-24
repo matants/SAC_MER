@@ -96,7 +96,7 @@ def merge_tbs__evolving__all_envs_together(root_path, is_final_eval):
 
 
 if __name__ == '__main__':
-    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_02_20__22_15/'
+    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_02_21__01_13/'
     NUM_ENVS = 5
     ############################################################################################
     # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     for buffer in buffer_sizes:
         df_arr = []
         for i_alg, alg in enumerate(algorithms_dirs):
-            path = root_path + alg + f'/buffer_{buffer}/final_only'
+            path = root_path + "/" + alg + f'/buffer_{buffer}/final_only'
             df = merge_tbs__final_only(path)
             df_arr.append(df)
             df = df.sort_values(by=['timesteps'])

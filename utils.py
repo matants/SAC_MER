@@ -12,7 +12,7 @@ import torch
 Param = namedtuple('Param', ['mean', 'half_range'])
 
 
-def seed(seed):
+def seed_all(seed):
     random.seed(seed)
     torch.random.manual_seed(seed)
     np.random.seed(seed)

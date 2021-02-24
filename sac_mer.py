@@ -79,37 +79,37 @@ class SACMER(ReservoirSAC):
     """
 
     def __init__(
-        self,
-        policy: Union[str, Type[SACPolicy]],
-        env: Union[GymEnv, str],
-        learning_rate: Union[float, Callable] = 3e-4,
-        buffer_size: int = int(1e6),
-        learning_starts: int = 100,
-        batch_size: int = 256,
-        tau: float = 0.005,
-        gamma: float = 0.99,
-        train_freq: int = 1,
-        gradient_steps: int = 1,
-        n_episodes_rollout: int = -1,
-        action_noise: Optional[ActionNoise] = None,
-        optimize_memory_usage: bool = False,
-        ent_coef: Union[str, float] = "auto",
-        target_update_interval: int = 1,
-        target_entropy: Union[str, float] = "auto",
-        use_sde: bool = False,
-        sde_sample_freq: int = -1,
-        use_sde_at_warmup: bool = False,
-        tensorboard_log: Optional[str] = None,
-        create_eval_env: bool = False,
-        policy_kwargs: Dict[str, Any] = None,
-        verbose: int = 0,
-        seed: Optional[int] = None,
-        device: Union[th.device, str] = "auto",
-        _init_setup_model: bool = True,
-        monitor_wrapper: bool = True,
-        mer_gamma: float = 0.3,
-        mer_s: int = 5,
-        reset_optimizers_during_training: bool = True,
+            self,
+            policy: Union[str, Type[SACPolicy]],
+            env: Union[GymEnv, str],
+            learning_rate: Union[float, Callable] = 3e-4,
+            buffer_size: int = int(1e6),
+            learning_starts: int = 100,
+            batch_size: int = 256,
+            tau: float = 0.005,
+            gamma: float = 0.99,
+            train_freq: int = 1,
+            gradient_steps: int = 1,
+            n_episodes_rollout: int = -1,
+            action_noise: Optional[ActionNoise] = None,
+            optimize_memory_usage: bool = False,
+            ent_coef: Union[str, float] = "auto",
+            target_update_interval: int = 1,
+            target_entropy: Union[str, float] = "auto",
+            use_sde: bool = False,
+            sde_sample_freq: int = -1,
+            use_sde_at_warmup: bool = False,
+            tensorboard_log: Optional[str] = None,
+            create_eval_env: bool = False,
+            policy_kwargs: Dict[str, Any] = None,
+            verbose: int = 0,
+            seed: Optional[int] = None,
+            device: Union[th.device, str] = "auto",
+            _init_setup_model: bool = True,
+            monitor_wrapper: bool = True,
+            mer_gamma: float = 0.3,
+            mer_s: int = 5,
+            reset_optimizers_during_training: bool = True,
     ):
         super(SACMER, self).__init__(
             policy,
@@ -143,7 +143,7 @@ class SACMER(ReservoirSAC):
 
         self.mer_gamma = mer_gamma
         self.mer_s = mer_s
-        self.reset_optimizers_during_training=reset_optimizers_during_training
+        self.reset_optimizers_during_training = reset_optimizers_during_training
 
         # if self.policy_kwargs['optimizer_class'] is not th.optim.SGD:
         #     raise ValueError("Optimizer Must be SGD!")
@@ -233,7 +233,6 @@ class SACMER(ReservoirSAC):
                 replay_data = self.replay_buffer.sample(batch_size, env=self._vec_normalize_env)
                 for optimizer in optimizers:
                     update_learning_rate(optimizer, base_lr)
-
 
             # We need to sample because `log_std` may have changed between two gradient steps
             if self.use_sde:

@@ -6,18 +6,17 @@ from datetime import datetime
 import subprocess
 from time import time
 
-from stable_baselines3 import DQN
-from dqn_reservoir import ReservoirDQN
-from dqn_mer import DQNMER
-from algs_expanded import DQNExpanded
-from stable_baselines3.dqn import MlpPolicy
+from stable_baselines3 import SAC
+from sac_reservoir import ReservoirSAC
+from sac_mer import SACMER
+from algs_expanded import SACExpanded
+from stable_baselines3.sac import MlpPolicy
 from utils import change_env_parameters, Param, AlternatingParamsUniform, SequentialParams, seed_all
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList, EventCallback
 import pickle
 import os
 
 initial_seed = 73
-seed = None
 NUM_OF_REDOS = 10  # how many times we run the training loops (for confidence bounds)
 EVAL_FREQ = 100
 N_EVAL_EPISODES = 5
@@ -31,7 +30,7 @@ GRADIENT_STEPS = 5
 META_TRAINING_TIMESTEPS = 10000
 FINAL_TRAINING_TIMESTEPS = 10000
 
-env_name = 'CartPole-v1'
+env_name = 'ContinuousCartPole-v1'
 buffer_sizes = [50000]
 
 now = datetime.now().strftime("%Y_%m_%d__%H_%M")
@@ -88,10 +87,10 @@ def train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_i
             training_timesteps = FINAL_TRAINING_TIMESTEPS
             log_name += '_final'
         change_env_parameters(env, eval_env, parameter_dict=param)
-        if model_alg.__name__ == 'DQNMER' and last_round_no_mer and (i_param == (len(params) - 1)):
+        if model_alg.__name__ == 'SACMER' and last_round_no_mer and (i_param == (len(params) - 1)):
             is_reservoir = False
             is_mer = False
-        else:  # This will not have any effect on regular DQN
+        else:  # This will not have any effect on regular SAC
             is_reservoir = True
             is_mer = True
         model.update_env(env, monitor_wrapper=False, is_reservoir=is_reservoir,
@@ -123,10 +122,10 @@ def train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_i
 
 total_start_time = time()
 ################################################################
-# DQN - no optimizer reset between environment updates
+# SAC - no optimizer reset between environment updates
 ################################################################
-source_subsave = save_path + 'DQN_no_reset/'
-model_alg = DQNExpanded
+source_subsave = save_path + 'SAC_no_reset/'
+model_alg = SACExpanded
 reset_optimizers_between_envs = False
 reset_optimizers_every_iter = False
 last_round_no_mer = False
@@ -134,7 +133,7 @@ last_round_no_mer = False
 for buffer_size in buffer_sizes:
     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
-        # seed = initial_seed + i
+        seed = initial_seed + i
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
                   True, seed)
@@ -143,10 +142,10 @@ for buffer_size in buffer_sizes:
                   False, seed)
 
 ################################################################
-# DQN - with optimizer reset between environment updates
+# SAC - with optimizer reset between environment updates
 ################################################################
-source_subsave = save_path + 'DQN_with_reset/'
-model_alg = DQNExpanded
+source_subsave = save_path + 'SAC_with_reset/'
+model_alg = SACExpanded
 reset_optimizers_between_envs = True
 reset_optimizers_every_iter = False
 last_round_no_mer = False
@@ -154,24 +153,28 @@ last_round_no_mer = False
 for buffer_size in buffer_sizes:
     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
-        # seed = initial_seed + i
+        seed = initial_seed + i
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter,
                   buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
                   True, seed)
+        # train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter,buffer_size,
+        # subsave + 'final_only/', i, last_round_no_mer,
+        #           False,seed)  # not necessary, this was already tested since there are no optimizer resets
+        #           if only training on final env
 
 ################################################################
-# DQNMER - no changes - reset optimizer every run
+# SACMER - no changes - reset optimizer every run
 ################################################################
-source_subsave = save_path + 'DQNMER_no_end_standard_with_resets/'
-model_alg = DQNMER
+source_subsave = save_path + 'SACMER_no_end_standard_with_resets/'
+model_alg = SACMER
 reset_optimizers_between_envs = False
 reset_optimizers_every_iter = True
 last_round_no_mer = False
 for buffer_size in buffer_sizes:
     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
-        # seed = initial_seed + i
+        seed = initial_seed + i
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
                   True, seed)
@@ -180,33 +183,33 @@ for buffer_size in buffer_sizes:
                   False, seed)
 
 ################################################################
-# DQNMER - final training round is standard - reset optimizer every run
+# SACMER - final training round is standard - reset optimizer every run
 ################################################################
-source_subsave = save_path + 'DQNMER_end_standard_with_resets/'
-model_alg = DQNMER
+source_subsave = save_path + 'SACMER_end_standard_with_resets/'
+model_alg = SACMER
 reset_optimizers_between_envs = False
 reset_optimizers_every_iter = True
 last_round_no_mer = True
 for buffer_size in buffer_sizes:
     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
-        # seed = initial_seed + i
+        seed = initial_seed + i
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
                   True, seed)
 
 ################################################################
-# DQNMER - no changes - no reset optimizers every run
+# SACMER - no changes - no reset optimizers every run
 ################################################################
-source_subsave = save_path + 'DQNMER_no_end_standard/'
-model_alg = DQNMER
+source_subsave = save_path + 'SACMER_no_end_standard/'
+model_alg = SACMER
 reset_optimizers_between_envs = False
 reset_optimizers_every_iter = False
 last_round_no_mer = False
 for buffer_size in buffer_sizes:
     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
-        # seed = initial_seed + i
+        seed = initial_seed + i
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
                   True, seed)
@@ -215,17 +218,17 @@ for buffer_size in buffer_sizes:
                   False, seed)
 
 ################################################################
-# DQNMER - final training round is standard - no reset optimizers every run
+# SACMER - final training round is standard - no reset optimizers every run
 ################################################################
-source_subsave = save_path + 'DQNMER_end_standard/'
-model_alg = DQNMER
+source_subsave = save_path + 'SACMER_end_standard/'
+model_alg = SACMER
 reset_optimizers_between_envs = False
 reset_optimizers_every_iter = False
 last_round_no_mer = True
 for buffer_size in buffer_sizes:
     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
-        # seed = initial_seed + i
+        seed = initial_seed + i
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
                   True, seed)
