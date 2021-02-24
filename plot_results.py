@@ -96,14 +96,14 @@ def merge_tbs__evolving__all_envs_together(root_path, is_final_eval):
 
 
 if __name__ == '__main__':
-    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_02_21__01_13/'
+    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_02_24__13_14/'
     NUM_ENVS = 5
     ############################################################################################
     # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
     # sizes? nah)
     ############################################################################################
-    algorithms_dirs = ['DQN_no_reset', 'DQNMER_no_end_standard']
-    algorithms_names = ['DQN', 'DQN + MER']
+    algorithms_dirs = ['DQN_no_reset', 'DQNMER_no_end_standard', 'DQNMER_no_end_standard_with_resets']
+    algorithms_names = ['DQN', 'DQN + MER', 'DQN + MER with optimizer resets']
     buffer_sizes = [50000]
     for buffer in buffer_sizes:
         df_arr = []
@@ -126,9 +126,11 @@ if __name__ == '__main__':
     ############################################################################################
     # Comparing evolving running_eval_between all algorithms
     ############################################################################################
-    algorithms_dirs = ['DQN_no_reset', 'DQN_with_reset', 'DQNMER_no_end_standard', 'DQNMER_end_standard']
+    algorithms_dirs = ['DQN_no_reset', 'DQN_with_reset', 'DQNMER_no_end_standard',
+                       'DQNMER_no_end_standard_with_resets', 'DQNMER_end_standard', 'DQNMER_end_standard_with_resets']
     algorithms_names = ['DQN (without optimizer resets)', 'DQN (with optimizer resets between envs)', 'DQN + MER',
-                        'DQN + MER (final env regular DQN)']
+                        'DQN + MER with optimizer resets',
+                        'DQN + MER (final env regular DQN)', 'DQN + MER with optimizer resets (final env regular DQN)']
     buffer_sizes = [50000]  # , 5000, 256]
     env_switch_times = [10000, 20000, 30000, 40000]
     for buffer in buffer_sizes:

@@ -15,11 +15,14 @@ from utils import change_env_parameters, Param, AlternatingParamsUniform, Sequen
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList, EventCallback
 import pickle
 import os
+import shutil
+import environments  # this registers the environments
+
 
 initial_seed = 73
-NUM_OF_REDOS = 10  # how many times we run the training loops (for confidence bounds)
-EVAL_FREQ = 100
-N_EVAL_EPISODES = 5
+NUM_OF_REDOS = 5  # how many times we run the training loops (for confidence bounds)
+EVAL_FREQ = 200
+N_EVAL_EPISODES = 4
 NUM_TRAINING_ENVS = 4
 MER_S = 2
 MER_GAMMA = 0.3
@@ -36,6 +39,7 @@ buffer_sizes = [50000]
 now = datetime.now().strftime("%Y_%m_%d__%H_%M")
 save_path = './experiments__' + now + '/'
 os.mkdir(save_path)
+shutil.copy(__file__, save_path)
 
 params_dict = {
     'x_threshold': [2.4, 2.1, 1.8, 1.5, 1.2]
@@ -84,7 +88,10 @@ def train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_i
     for i_param, param in enumerate(params):
         log_name = 'run_' + str(i_param)
         if i_param == (len(params) - 1):
-            training_timesteps = FINAL_TRAINING_TIMESTEPS
+            if not is_evolving:
+                training_timesteps = FINAL_TRAINING_TIMESTEPS + NUM_TRAINING_ENVS * META_TRAINING_TIMESTEPS
+            else:
+                training_timesteps = FINAL_TRAINING_TIMESTEPS
             log_name += '_final'
         change_env_parameters(env, eval_env, parameter_dict=param)
         if model_alg.__name__ == 'SACMER' and last_round_no_mer and (i_param == (len(params) - 1)):
@@ -134,6 +141,7 @@ for buffer_size in buffer_sizes:
     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
         seed = initial_seed + i
+        seed_all(seed)
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
                   True, seed)
@@ -154,14 +162,11 @@ for buffer_size in buffer_sizes:
     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
         seed = initial_seed + i
+        seed_all(seed)
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter,
                   buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
                   True, seed)
-        # train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter,buffer_size,
-        # subsave + 'final_only/', i, last_round_no_mer,
-        #           False,seed)  # not necessary, this was already tested since there are no optimizer resets
-        #           if only training on final env
 
 ################################################################
 # SACMER - no changes - reset optimizer every run
@@ -175,6 +180,7 @@ for buffer_size in buffer_sizes:
     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
         seed = initial_seed + i
+        seed_all(seed)
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
                   True, seed)
@@ -194,6 +200,7 @@ for buffer_size in buffer_sizes:
     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
         seed = initial_seed + i
+        seed_all(seed)
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
                   True, seed)
@@ -210,6 +217,7 @@ for buffer_size in buffer_sizes:
     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
         seed = initial_seed + i
+        seed_all(seed)
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
                   True, seed)
@@ -229,6 +237,7 @@ for buffer_size in buffer_sizes:
     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
     for i in range(NUM_OF_REDOS):
         seed = initial_seed + i
+        seed_all(seed)
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
                   True, seed)
