@@ -1,0 +1,3 @@
+These changes were made to the packcage files locally:
+1) In dqn.py, I changed smooth_l1_loss to mse_loss in line 172 ("train" method).
+2) In off_policy_algorithm.py, I added a catch to the ZeroDivisionError that can happen when fps is calculated in the method _dump_logs (line 330).

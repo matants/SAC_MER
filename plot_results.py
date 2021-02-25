@@ -96,7 +96,7 @@ def merge_tbs__evolving__all_envs_together(root_path, is_final_eval):
 
 
 if __name__ == '__main__':
-    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_02_24__13_14/'
+    root_path = 'C:/Users/matan/Documents/SAC_MER/experiments__2021_02_25__22_47/'
     NUM_ENVS = 5
     ############################################################################################
     # Comparing final_only training runs between algorithms (mer shouldn't be helpful, but maybe with different batch
@@ -119,7 +119,7 @@ if __name__ == '__main__':
         plt.suptitle(f'Buffer size = {buffer}')
         plt.xlabel('Steps')
         plt.ylabel('Reward')
-        plt.axhline(y=500)
+        plt.axhline(y=500, linestyle='--', color='black')
         plt.grid()
         plt.show()
 
@@ -146,8 +146,8 @@ if __name__ == '__main__':
         plt.xlabel('Steps')
         plt.ylabel('Reward')
         for x in env_switch_times:
-            plt.axvline(x=x)
-        plt.axhline(y=500)
+            plt.axvline(x=x, linestyle='--', color='black')
+        plt.axhline(y=500, linestyle='--', color='black')
         plt.grid()
         plt.show()
 
