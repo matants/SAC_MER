@@ -25,8 +25,7 @@ class ContinuousCartPoleEnv(gym.Env):
         self.total_mass = (self.masspole + self.masscart)
         self.length = 0.5  # actually half the pole's length
         self.polemass_length = (self.masspole * self.length)
-        self.force_mag = 10.0  # this was originally 30, but I want to make things harder for SAC so I made the limit
-        # equal to the discrete version of CartPole
+        self.force_mag = 30.0  # This is 10 in the discrete version, but I used 30 in all runs of ContinuousCartPole
         self.tau = 0.02  # seconds between state updates
         self.min_action = -1.0
         self.max_action = 1.0
