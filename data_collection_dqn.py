@@ -98,10 +98,10 @@ def train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_i
                 training_timesteps = FINAL_TRAINING_TIMESTEPS
             log_name += '_final'
         change_env_parameters(env, eval_env, parameter_dict=param)
-        if model_alg.__name__ == 'SACMER' and last_round_no_mer and (i_param == (len(params) - 1)):
+        if model_alg.__name__ == 'DQNMER' and last_round_no_mer and (i_param == (len(params) - 1)):
             is_reservoir = False
             is_mer = False
-        else:  # This will not have any effect on regular SAC
+        else:  # This will not have any effect on regular DQN
             is_reservoir = True
             is_mer = True
         model.update_env(env, monitor_wrapper=False, is_reservoir=is_reservoir,
@@ -134,17 +134,18 @@ def train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_i
 
 total_start_time = time()
 for i in range(NUM_OF_REDOS):
-    seed = initial_seed + i
-    ################################################################
-    # DQN - no optimizer reset between environment updates
-    ################################################################
-    source_subsave = save_path + 'DQN_no_reset/'
-    model_alg = DQNExpanded
-    reset_optimizers_between_envs = False
-    reset_optimizers_every_iter = False
-    last_round_no_mer = False
-
     for buffer_size in buffer_sizes:
+        seed = initial_seed + i
+
+        ################################################################
+        # DQN - no optimizer reset between environment updates
+        ################################################################
+        source_subsave = save_path + 'DQN_no_reset/'
+        model_alg = DQNExpanded
+        reset_optimizers_between_envs = False
+        reset_optimizers_every_iter = False
+        last_round_no_mer = False
+
         subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
@@ -153,62 +154,61 @@ for i in range(NUM_OF_REDOS):
                   subsave + 'final_only/', i, last_round_no_mer,
                   False, seed)
 
-    ################################################################
-    # DQN - with optimizer reset between environment updates
-    ################################################################
-    source_subsave = save_path + 'DQN_with_reset/'
-    model_alg = DQNExpanded
-    reset_optimizers_between_envs = True
-    reset_optimizers_every_iter = False
-    last_round_no_mer = False
+        ################################################################
+        # DQN - with optimizer reset between environment updates
+        ################################################################
+        source_subsave = save_path + 'DQN_with_reset/'
+        model_alg = DQNExpanded
+        reset_optimizers_between_envs = True
+        reset_optimizers_every_iter = False
+        last_round_no_mer = False
 
-    for buffer_size in buffer_sizes:
         subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter,
                   buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
                   True, seed)
 
-    # ################################################################
-    # # DQNMER - no changes - reset optimizer every run
-    # ################################################################
-    # source_subsave = save_path + 'DQNMER_no_end_standard_with_resets/'
-    # model_alg = DQNMER
-    # reset_optimizers_between_envs = False
-    # reset_optimizers_every_iter = True
-    # last_round_no_mer = False
-    # for buffer_size in buffer_sizes:
-    #     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
-    #     train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
-    #               subsave + 'evolving/', i, last_round_no_mer,
-    #               True, seed)
-    #     train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
-    #               subsave + 'final_only/', i, last_round_no_mer,
-    #               False, seed)
-    #
-    # ################################################################
-    # # DQNMER - final training round is standard - reset optimizer every run
-    # ################################################################
-    # source_subsave = save_path + 'DQNMER_end_standard_with_resets/'
-    # model_alg = DQNMER
-    # reset_optimizers_between_envs = False
-    # reset_optimizers_every_iter = True
-    # last_round_no_mer = True
-    # for buffer_size in buffer_sizes:
-    #     subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
-    #     train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
-    #               subsave + 'evolving/', i, last_round_no_mer,
-    #               True, seed)
+        # ################################################################
+        # # DQNMER - no changes - reset optimizer every run
+        # ################################################################
+        # source_subsave = save_path + 'DQNMER_no_end_standard_with_resets/'
+        # model_alg = DQNMER
+        # reset_optimizers_between_envs = False
+        # reset_optimizers_every_iter = True
+        # last_round_no_mer = False
+        # 
+        # subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
+        # train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
+        #           subsave + 'evolving/', i, last_round_no_mer,
+        #           True, seed)
+        # train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
+        #           subsave + 'final_only/', i, last_round_no_mer,
+        #           False, seed)
+        # 
+        # ################################################################
+        # # DQNMER - final training round is standard - reset optimizer every run
+        # ################################################################
+        # source_subsave = save_path + 'DQNMER_end_standard_with_resets/'
+        # model_alg = DQNMER
+        # reset_optimizers_between_envs = False
+        # reset_optimizers_every_iter = True
+        # last_round_no_mer = True
+        # 
+        # subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
+        # train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
+        #           subsave + 'evolving/', i, last_round_no_mer,
+        #           True, seed)
 
-    ################################################################
-    # DQNMER - no changes - no reset optimizers every run
-    ################################################################
-    source_subsave = save_path + 'DQNMER_no_end_standard/'
-    model_alg = DQNMER
-    reset_optimizers_between_envs = False
-    reset_optimizers_every_iter = False
-    last_round_no_mer = False
-    for buffer_size in buffer_sizes:
+        ################################################################
+        # DQNMER - no changes - no reset optimizers every run
+        ################################################################
+        source_subsave = save_path + 'DQNMER_no_end_standard/'
+        model_alg = DQNMER
+        reset_optimizers_between_envs = False
+        reset_optimizers_every_iter = False
+        last_round_no_mer = False
+
         subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
@@ -217,19 +217,19 @@ for i in range(NUM_OF_REDOS):
                   subsave + 'final_only/', i, last_round_no_mer,
                   False, seed)
 
-    ################################################################
-    # DQNMER - final training round is standard - no reset optimizers every run
-    ################################################################
-    source_subsave = save_path + 'DQNMER_end_standard/'
-    model_alg = DQNMER
-    reset_optimizers_between_envs = False
-    reset_optimizers_every_iter = False
-    last_round_no_mer = True
-    for buffer_size in buffer_sizes:
+        ################################################################
+        # DQNMER - final training round is standard - no reset optimizers every run
+        ################################################################
+        source_subsave = save_path + 'DQNMER_end_standard/'
+        model_alg = DQNMER
+        reset_optimizers_between_envs = False
+        reset_optimizers_every_iter = False
+        last_round_no_mer = True
+
         subsave = source_subsave + 'buffer_' + str(buffer_size) + '/'
         train_alg(model_alg, reset_optimizers_between_envs, reset_optimizers_every_iter, buffer_size,
                   subsave + 'evolving/', i, last_round_no_mer,
                   True, seed)
 
-    print(f'Iteration {i} done! Total time = {time() - total_start_time} seconds.')
+        print(f'Iteration {i} with buffer size {buffer_size} done! Total time = {time() - total_start_time} seconds.')
 print(f'All done! Total time = {time() - total_start_time} seconds.')
